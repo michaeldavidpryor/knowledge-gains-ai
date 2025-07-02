@@ -31,6 +31,9 @@ from agents.fitness_web_agent import FitnessWebAgent
 # Import our specialized agents
 from agents.weightlifting_coordinator import WeightliftingCoordinator
 
+# Import new models
+from models.responses import InformationRequest, ProgramGenerated, ErrorResponse, ResponseTypes
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Knowledge Gains",
@@ -151,7 +154,7 @@ async def streaming_demo(request: Request):
     )
 
 
-@app.post("/api/generate-program")
+@app.post("/api/generate-program", response_model=ResponseTypes)
 async def generate_program(
     background_tasks: BackgroundTasks,
     request: str = Form(...),
@@ -176,12 +179,11 @@ async def generate_program(
 
     if result.get("type") == "information_request":
         # Return form for missing information
-        return JSONResponse({
-            "status": "needs_info",
-            "questions": result["questions"],
-            "missing_info": result["missing_info"],
-            "current_info": result["current_info"],
-        })
+        return InformationRequest(
+            missing_info=result["missing_info"],
+            questions=result["questions"],
+            current_info=result["current_info"],
+        )
 
     elif result.get("type") == "program_generated":
         # Save program to database
@@ -206,19 +208,14 @@ async def generate_program(
         # Generate individual workout records
         background_tasks.add_task(create_workout_instances, program_id, program)
 
-        return JSONResponse({
-            "status": "success",
-            "program_id": program_id,
-            "program": program,
-            "redirect": f"/program/{program_id}",
-        })
+        return ProgramGenerated(
+            program_id=program_id,
+            program=program,
+            redirect=f"/program/{program_id}",
+        )
 
     else:
-        return JSONResponse({
-            "status": "error",
-            "message": "Failed to generate program",
-            "details": result,
-        })
+        return ErrorResponse(message="Failed to generate program", details=result)
 
 
 @app.get("/program/{program_id}", response_class=HTMLResponse)

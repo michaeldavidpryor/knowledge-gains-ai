@@ -36,6 +36,9 @@
             <div id="chat-response" class="prose max-w-none">
                 <div class="text-gray-500">AI response will appear here...</div>
             </div>
+            <div id="chat-spinner" class="flex items-center justify-center mt-2 hidden">
+                <span class="loading loading-spinner loading-md text-blue-500"></span>
+            </div>
         </div>
         
         <!-- Form Analysis Example -->
@@ -86,6 +89,9 @@
             
             <div id="form-response" class="mt-6 prose max-w-none">
                 <div class="text-gray-500">Form analysis will appear here...</div>
+            </div>
+            <div id="form-spinner" class="flex items-center justify-center mt-2 hidden">
+                <span class="loading loading-spinner loading-md text-green-500"></span>
             </div>
         </div>
     </div>
@@ -140,6 +146,13 @@
                 // Clear input
                 input.value = '';
                 
+                // Toggle spinner
+                const chatSpinner = document.getElementById('chat-spinner');
+                chatSpinner.classList.remove('hidden');
+                setTimeout(() => {
+                    chatSpinner.classList.add('hidden');
+                }, 1000);
+                
             } catch (error) {
                 console.error('Error:', error);
                 responseDiv.innerHTML = `<div class="text-red-500">Error: ${error.message}</div>`;
@@ -191,6 +204,13 @@
                 
                 // Reset form
                 form.reset();
+                
+                // Toggle spinner
+                const formSpinner = document.getElementById('form-spinner');
+                formSpinner.classList.remove('hidden');
+                setTimeout(() => {
+                    formSpinner.classList.add('hidden');
+                }, 1000);
                 
             } catch (error) {
                 console.error('Error:', error);
