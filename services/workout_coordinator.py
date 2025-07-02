@@ -1,5 +1,5 @@
 """
-Weightlifting Program Coordinator - Specialized agent for generating science-based workout programs
+Workout Coordinator Service - Specialized service for generating science-based workout programs
 """
 
 import asyncio
@@ -7,15 +7,15 @@ import json
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from .base_agent import BaseAgent
+from .base_service import BaseService
 
 
-class WeightliftingCoordinator(BaseAgent):
-    """Specialized coordinator for weightlifting program generation"""
+class WorkoutCoordinatorService(BaseService):
+    """Specialized coordinator service for workout program generation"""
 
     def __init__(self):
         super().__init__(
-            name="WeightliftingCoordinator", model="gpt-4.1-2025-04-14", temperature=0.2
+            name="WorkoutCoordinatorService", model="gpt-4.1-2025-04-14", temperature=0.2
         )
         self.required_info = {
             "equipment": None,
@@ -24,11 +24,9 @@ class WeightliftingCoordinator(BaseAgent):
             "user_files": [],
             "program_request": None,
         }
-        self.fitness_web_agent = None
-        self.file_processor_agent = None
 
     async def process(self, input_data: Any) -> Dict[str, Any]:
-        """Process weightlifting program request"""
+        """Process workout program request"""
 
         if isinstance(input_data, str):
             user_request = input_data
@@ -37,7 +35,7 @@ class WeightliftingCoordinator(BaseAgent):
             user_request = input_data.get("request", "")
             additional_info = input_data
         else:
-            return {"error": "Invalid input format for weightlifting coordinator"}
+            return {"error": "Invalid input format for workout coordinator"}
 
         # Extract any provided information
         self._extract_provided_info(user_request, additional_info)
@@ -179,7 +177,7 @@ class WeightliftingCoordinator(BaseAgent):
         }
 
     async def _generate_program(self, user_request: str) -> Dict[str, Any]:
-        """Generate the complete weightlifting program"""
+        """Generate the complete workout program"""
 
         system_prompt = """You are a world-class strength and conditioning coach with expertise in:
         - Exercise science and muscle hypertrophy
@@ -187,7 +185,7 @@ class WeightliftingCoordinator(BaseAgent):
         - Equipment-specific exercise selection
         - Evidence-based training methodologies
         
-        Create detailed, scientifically-backed weightlifting programs based on user requirements."""
+        Create detailed, scientifically-backed workout programs based on user requirements."""
 
         # Prepare file context if available
         file_context = ""
@@ -195,7 +193,7 @@ class WeightliftingCoordinator(BaseAgent):
             file_context = f"\nUser has provided these relevant files: {self.required_info['user_files']}"
 
         program_prompt = f"""
-        Create a comprehensive weightlifting program with these specifications:
+        Create a comprehensive workout program with these specifications:
         
         User Request: {user_request}
         Equipment Available: {self.required_info['equipment']}
@@ -255,7 +253,7 @@ class WeightliftingCoordinator(BaseAgent):
             program_data["generated_at"] = datetime.now().isoformat()
             program_data["user_request"] = user_request
             program_data["agent_info"] = {
-                "coordinator": "WeightliftingCoordinator",
+                "coordinator": "WorkoutCoordinatorService",
                 "model": self.model,
                 "version": "1.0",
             }
@@ -344,7 +342,7 @@ class WeightliftingCoordinator(BaseAgent):
             return base_weight + (2.5 * (week - 1))
 
     async def get_capabilities(self) -> List[str]:
-        """Return weightlifting coordinator capabilities"""
+        """Return workout coordinator capabilities"""
         return [
             "program_generation",
             "exercise_selection",

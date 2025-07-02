@@ -1,6 +1,6 @@
 """
-File Processor Agent for analyzing uploaded fitness documents
-Using OpenAI Assistants API with file search and code interpreter
+File Processor Service for analyzing uploaded fitness documents
+Using OpenAI Responses API with file search and code interpreter
 """
 
 import json
@@ -8,51 +8,23 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .base_agent import BaseAgent
+from .base_service import BaseService
 
 
-class FileProcessorAgent(BaseAgent):
-    """Agent specialized in processing fitness-related documents using Assistants API"""
+class FileProcessorService(BaseService):
+    """Service for processing fitness-related documents using Responses API"""
 
     def __init__(self, upload_directory: str = "uploads"):
-        super().__init__(name="FileProcessorAgent", model="gpt-4.1-2025-04-14", temperature=0.2)
+        super().__init__(name="FileProcessorService", model="gpt-4.1-2025-04-14", temperature=0.2)
         self.upload_directory = upload_directory
         self.supported_formats = {".pdf", ".txt", ".md", ".doc", ".docx", ".csv", ".xlsx", ".json"}
         self.processed_files_cache = {}
-        self.vector_store_id = None
 
         # Create upload directory if it doesn't exist
         Path(upload_directory).mkdir(parents=True, exist_ok=True)
 
-    async def initialize(self):
-        """Initialize the assistant with file processing capabilities"""
-        instructions = """You are an expert fitness document analyzer specializing in:
-        - Extracting workout programs from various document formats
-        - Analyzing exercise form descriptions and cues
-        - Identifying training principles and methodologies
-        - Extracting nutrition information and meal plans
-        - Understanding periodization and programming concepts
-        
-        When analyzing documents:
-        1. Extract all relevant workout information including exercises, sets, reps, and progression schemes
-        2. Identify key training principles and methodologies
-        3. Note any specific form cues or technique descriptions
-        4. Extract nutrition guidelines if present
-        5. Provide structured output in JSON format when possible
-        
-        Use the file search tool to analyze uploaded documents and the code interpreter for data processing."""
-        
-        await self.initialize_assistant(
-            instructions=instructions,
-            tools=["file_search", "code_interpreter"]
-        )
-
     async def process(self, input_data: Any) -> Dict[str, Any]:
         """Process uploaded fitness files and extract relevant information"""
-        
-        # Initialize assistant if not already done
-        if not self.assistant_id:
-            await self.initialize()
         
         # Handle different input types
         if isinstance(input_data, dict):
@@ -156,9 +128,6 @@ class FileProcessorAgent(BaseAgent):
         request = input_data.get("analyze_request", "")
         context = input_data.get("context", {})
         
-        if not self.thread_id:
-            await self.create_thread()
-        
         # Build analysis prompt
         prompt = f"""Based on the uploaded fitness documents, {request}
         
@@ -177,9 +146,6 @@ class FileProcessorAgent(BaseAgent):
 
     async def extract_workout_program(self, file_path: str) -> Dict[str, Any]:
         """Extract a structured workout program from a file"""
-        
-        if not self.assistant_id:
-            await self.initialize()
         
         # Upload file for code interpreter
         with open(file_path, "rb") as f:
@@ -238,9 +204,6 @@ class FileProcessorAgent(BaseAgent):
 
     async def analyze_exercise_form(self, exercise_name: str, file_ids: Optional[List[str]] = None) -> Dict[str, Any]:
         """Analyze exercise form and technique from documents"""
-        
-        if not self.assistant_id:
-            await self.initialize()
         
         prompt = f"""Analyze the exercise form and technique for: {exercise_name}
         
@@ -302,11 +265,11 @@ class FileProcessorAgent(BaseAgent):
         return None
 
     def _extract_json_from_response(self, response: str) -> Optional[Dict[str, Any]]:
-        """Extract JSON from assistant response"""
+        """Extract JSON from response"""
         return self._extract_structured_data(response)
 
     async def get_capabilities(self) -> List[str]:
-        """Return list of agent capabilities"""
+        """Return list of service capabilities"""
         base_capabilities = await super().get_capabilities()
         return base_capabilities + [
             "document_analysis",

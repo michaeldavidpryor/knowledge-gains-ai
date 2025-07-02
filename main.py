@@ -25,11 +25,10 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from supabase import create_client
 
-from agents.file_processor_agent import FileProcessorAgent
-from agents.fitness_web_agent import FitnessWebAgent
-
-# Import our specialized agents
-from agents.weightlifting_coordinator import WeightliftingCoordinator
+# Import our specialized services
+from services.file_processor import FileProcessorService
+from services.web_search import WebSearchService
+from services.workout_coordinator import WorkoutCoordinatorService
 
 # Import new models
 from models.responses import InformationRequest, ProgramGenerated, ErrorResponse, ResponseTypes
@@ -56,10 +55,10 @@ if not supabase_url or not supabase_key:
 
 supabase = create_client(supabase_url, supabase_key)
 
-# Initialize AI agents
-coordinator = WeightliftingCoordinator()
-file_processor = FileProcessorAgent()
-web_agent = FitnessWebAgent()
+# Initialize AI services
+coordinator = WorkoutCoordinatorService()
+file_processor = FileProcessorService()
+web_search = WebSearchService()
 
 
 # Pydantic models

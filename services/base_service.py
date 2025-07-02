@@ -1,6 +1,6 @@
 """
-Base Agent class for Knowledge Gains Weightlifting App
-Refactored to use OpenAI Responses API (stateful, tool-augmented)
+Base Service class for Knowledge Gains Weightlifting App
+Using OpenAI Responses API (stateful, tool-augmented)
 """
 
 import os
@@ -13,8 +13,8 @@ from openai import AsyncOpenAI
 load_dotenv()
 
 
-class BaseAgent(ABC):
-    """Base class for all AI agents powered by the OpenAI Responses API"""
+class BaseService(ABC):
+    """Base class for all AI services powered by the OpenAI Responses API"""
 
     def __init__(
         self,
