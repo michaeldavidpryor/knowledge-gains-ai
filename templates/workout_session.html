@@ -100,7 +100,7 @@
                                     r="45"
                                     cx="50"
                                     cy="50"
-                                    id="progress-circle"/>
+                                    id="progress-circle"></circle>
                             </svg>
                             <div class="absolute inset-0 flex items-center justify-center">
                                 <span id="progress-text" class="text-xs font-bold">0%</span>
@@ -186,46 +186,46 @@
                                     
                                     <!-- Weight Input -->
                                     <td class="text-center">
-                                        <input type="number" 
-                                               class="weight-input input input-sm w-20 text-center"
-                                               id="weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"
-                                               placeholder="0"
-                                               step="0.5"
-                                               min="0"
-                                               hx-post="/api/update-set"
-                                               hx-trigger="change"
-                                               hx-vals='{"workout_id": "{{ workout.id }}", "exercise_name": "{{ exercise.name }}", "set_number": {{ set_num }}}'
-                                               hx-include="[id^='weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}']"
-                                               hx-target="#toast-container"
-                                               hx-swap="beforeend">
+                                        <label for="weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"></label><input type="number"
+                                                                                                                                 class="weight-input input input-sm w-20 text-center"
+                                                                                                                                 id="weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"
+                                                                                                                                 placeholder="0"
+                                                                                                                                 step="0.5"
+                                                                                                                                 min="0"
+                                                                                                                                 hx-post="/api/update-set"
+                                                                                                                                 hx-trigger="change"
+                                                                                                                                 hx-vals='{"workout_id": "{{ workout.id }}", "exercise_name": "{{ exercise.name }}", "set_number": {{ set_num }}}'
+                                                                                                                                 hx-include="[id^='weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}']"
+                                                                                                                                 hx-target="#toast-container"
+                                                                                                                                 hx-swap="beforeend">
                                     </td>
                                     
                                     <!-- Reps Input -->
                                     <td class="text-center">
-                                        <input type="number" 
-                                               class="input input-sm w-16 text-center"
-                                               id="reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"
-                                               value="{{ exercise.reps.split('-')[0] if '-' in exercise.reps else exercise.reps }}"
-                                               min="1"
-                                               max="50"
-                                               hx-post="/api/update-set"
-                                               hx-trigger="change"
-                                               hx-vals='{"workout_id": "{{ workout.id }}", "exercise_name": "{{ exercise.name }}", "set_number": {{ set_num }}}'
-                                               hx-include="[id^='weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}']"
-                                               hx-target="#toast-container"
-                                               hx-swap="beforeend">
+                                        <label for="reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"></label><input type="number"
+                                                                                                                               class="input input-sm w-16 text-center"
+                                                                                                                               id="reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"
+                                                                                                                               value="{{ exercise.reps.split('-')[0] if '-' in exercise.reps else exercise.reps }}"
+                                                                                                                               min="1"
+                                                                                                                               max="50"
+                                                                                                                               hx-post="/api/update-set"
+                                                                                                                               hx-trigger="change"
+                                                                                                                               hx-vals='{"workout_id": "{{ workout.id }}", "exercise_name": "{{ exercise.name }}", "set_number": {{ set_num }}}'
+                                                                                                                               hx-include="[id^='weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}']"
+                                                                                                                               hx-target="#toast-container"
+                                                                                                                               hx-swap="beforeend">
                                     </td>
                                     
                                     <!-- RPE Input -->
                                     <td class="text-center">
-                                        <select class="select select-sm w-16 text-center"
-                                                id="rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"
-                                                hx-post="/api/update-set"
-                                                hx-trigger="change"
-                                                hx-vals='{"workout_id": "{{ workout.id }}", "exercise_name": "{{ exercise.name }}", "set_number": {{ set_num }}}'
-                                                hx-include="[id^='weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}']"
-                                                hx-target="#toast-container"
-                                                hx-swap="beforeend">
+                                        <label for="rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"></label><select class="select select-sm w-16 text-center"
+                                                                                                                               id="rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"
+                                                                                                                               hx-post="/api/update-set"
+                                                                                                                               hx-trigger="change"
+                                                                                                                               hx-vals='{"workout_id": "{{ workout.id }}", "exercise_name": "{{ exercise.name }}", "set_number": {{ set_num }}}'
+                                                                                                                               hx-include="[id^='weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}']"
+                                                                                                                               hx-target="#toast-container"
+                                                                                                                               hx-swap="beforeend">
                                             <option value="">-</option>
                                             {% for rpe in range(1, 11) %}
                                             <option value="{{ rpe }}">{{ rpe }}</option>
@@ -235,16 +235,16 @@
                                     
                                     <!-- Completion Checkbox -->
                                     <td class="text-center">
-                                        <input type="checkbox" 
-                                               class="checkbox checkbox-success"
-                                               id="completed-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"
-                                               hx-post="/api/update-set"
-                                               hx-trigger="change"
-                                               hx-vals='{"workout_id": "{{ workout.id }}", "exercise_name": "{{ exercise.name }}", "set_number": {{ set_num }}, "completed": true}'
-                                               hx-include="[id^='weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}']"
-                                               hx-target="#toast-container"
-                                               hx-swap="beforeend"
-                                               onchange="markSetCompleted('{{ exercise.name | replace(' ', '_') }}', {{ set_num }})">
+                                        <label for="completed-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"></label><input type="checkbox"
+                                                                                                                                    class="checkbox checkbox-success"
+                                                                                                                                    id="completed-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}"
+                                                                                                                                    hx-post="/api/update-set"
+                                                                                                                                    hx-trigger="change"
+                                                                                                                                    hx-vals='{"workout_id": "{{ workout.id }}", "exercise_name": "{{ exercise.name }}", "set_number": {{ set_num }}, "completed": true}'
+                                                                                                                                    hx-include="[id^='weight-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='reps-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}'], [id^='rpe-{{ exercise.name | replace(' ', '_') }}-{{ set_num }}']"
+                                                                                                                                    hx-target="#toast-container"
+                                                                                                                                    hx-swap="beforeend"
+                                                                                                                                    onchange="markSetCompleted('{{ exercise.name | replace(' ', '_') }}', {{ set_num }})">
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -254,9 +254,11 @@
                     
                     <!-- Exercise Notes -->
                     <div class="mt-4 p-3 bg-base-200 rounded-lg">
-                        <textarea class="textarea textarea-bordered w-full text-sm" 
-                                  placeholder="Exercise notes (form, adjustments, how it felt...)"
-                                  rows="2"></textarea>
+                        <label>
+<textarea class="textarea textarea-bordered w-full text-sm"
+          placeholder="Exercise notes (form, adjustments, how it felt...)"
+          rows="2"></textarea>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -288,9 +290,9 @@
                 <label class="label">
                     <span class="label-text">Modification Request</span>
                 </label>
-                <textarea id="modification-request" 
-                          class="textarea textarea-bordered" 
-                          placeholder="e.g., 'Replace with dumbbell variation', 'Reduce weight', 'Change to machine version'"></textarea>
+                <label for="modification-request"></label><textarea id="modification-request"
+                                                                    class="textarea textarea-bordered"
+                                                                    placeholder="e.g., 'Replace with dumbbell variation', 'Reduce weight', 'Change to machine version'"></textarea>
             </div>
             
             <div class="modal-action">

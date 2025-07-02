@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+
+    <!-- Tailwind CSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.8"></script>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-base-200">
+    <!-- Navigation -->
+    <div class="navbar bg-base-100 shadow-lg">
+        <div class="navbar-start">
+            <a href="/" class="btn btn-ghost normal-case text-xl">
+                <i class="fas fa-dumbbell text-primary"></i>
+                Knowledge Gains
+            </a>
+        </div>
+        <div class="navbar-end">
+            <a href="/dashboard" class="btn btn-ghost">Dashboard</a>
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" class="btn btn-ghost btn-circle avatar">
+                    <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </label>
+                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/profile">Profile</a></li>
+                    <li><a>Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-10">
+        <!-- Hero Section -->
+        <div class="hero min-h-[40vh] bg-base-100 rounded-xl shadow-lg">
+            <div class="hero-content text-center">
+                <div class="max-w-md">
+                    <h1 class="text-5xl font-bold">AI-Powered Workout Programs</h1>
+                    <p class="py-6">Describe your fitness goals, and let our AI agents craft a personalized, science-based weightlifting program just for you.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Program Generation Form -->
+        <div class="card bg-base-100 shadow-xl mt-10">
+            <div class="card-body">
+                <h2 class="card-title text-2xl">
+                    <i class="fas fa-magic text-primary"></i>
+                    Create Your New Program
+                </h2>
+                <p class="text-base-content/70 mb-4">Provide as much detail as you can for the best results.</p>
+
+                <form hx-post="/api/generate-program" hx-target="#response-area" hx-swap="innerHTML" hx-indicator="#loading-indicator">
+                    <!-- Main Request -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">What are your goals?</span>
+                        </label>
+                        <textarea name="request" class="textarea textarea-bordered h-24" placeholder="e.g., 'I want to build muscle and strength, focusing on the big 3 lifts. I'm an intermediate lifter.'" required></textarea>
+                    </div>
+
+                    <!-- Program Details -->
+                    <div class="grid md:grid-cols-3 gap-4 mt-4">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Equipment Access</span>
+                            </label>
+                            <select name="equipment" class="select select-bordered">
+                                <option value="full_gym" selected>Full Gym</option>
+                                <option value="home_gym">Home Gym (Barbell, Rack, Dumbbells)</option>
+                                <option value="minimal">Minimal (Dumbbells, Bands)</option>
+                                <option value="bodyweight">Bodyweight Only</option>
+                            </select>
+                        </div>
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Duration (weeks)</span>
+                            </label>
+                            <input type="number" name="duration_weeks" placeholder="e.g., 8" value="8" class="input input-bordered" />
+                        </div>
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Days per Week</span>
+                            </label>
+                            <input type="number" name="days_per_week" placeholder="e.g., 4" value="4" class="input input-bordered" />
+                        </div>
+                    </div>
+
+                    <!-- Submission -->
+                    <div class="card-actions justify-end mt-6">
+                        <button type="submit" class="btn btn-primary btn-wide">
+                            Generate Program
+                            <span class="loading loading-spinner loading-sm hidden" id="loading-indicator"></span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Response Area -->
+                <div id="response-area" class="mt-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Handle HTMX response to redirect after successful program generation
+        document.body.addEventListener('htmx:afterOnLoad', function(event) {
+            const xhr = event.detail.xhr;
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.status === 'success' && response.redirect) {
+                        window.location.href = response.redirect;
+                    }
+                } catch (e) {
+                    // Not a JSON response, or no redirect key. Do nothing.
+                }
+            }
+        });
+    </script>
+</body>
+</html>

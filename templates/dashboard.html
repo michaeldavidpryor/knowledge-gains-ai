@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+
+    <!-- Tailwind CSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.8"></script>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-base-200">
+    <!-- Navigation -->
+    <div class="navbar bg-base-100 shadow-lg">
+        <div class="navbar-start">
+            <a href="/dashboard" class="btn btn-ghost normal-case text-xl">
+                <i class="fas fa-dumbbell text-primary"></i>
+                Knowledge Gains
+            </a>
+        </div>
+        <div class="navbar-center">
+            <h1 class="text-lg font-semibold">Dashboard</h1>
+        </div>
+        <div class="navbar-end">
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" class="btn btn-ghost btn-circle avatar">
+                    <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </label>
+                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/profile">Profile</a></li>
+                    <li><a>Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-6">Welcome back, {{ user.email.split('@')[0] }}!</h1>
+
+        <!-- Current Program -->
+        <div class="card bg-base-100 shadow-xl mb-8">
+            <div class="card-body">
+                <h2 class="card-title text-2xl">
+                    <i class="fas fa-clipboard-list text-primary"></i>
+                    Current Program
+                </h2>
+
+                {% if current_program %}
+                <div class="mt-4">
+                    <h3 class="text-xl font-semibold">{{ current_program.name }}</h3>
+                    <p class="text-base-content/70 mt-1">{{ current_program.description }}</p>
+
+                    <div class="flex flex-wrap gap-4 mt-4 text-sm">
+                        <span><i class="fas fa-calendar-alt mr-1"></i> {{ current_program.duration_weeks }} weeks</span>
+                        <span><i class="fas fa-dumbbell mr-1"></i> {{ current_program.days_per_week }} days/week</span>
+                        <span><i class="fas fa-cogs mr-1"></i> {{ current_program.equipment_required | replace('_', ' ') | title }}</span>
+                    </div>
+
+                    <div class="card-actions justify-end mt-4">
+                        <a href="/program/{{ current_program.id }}" class="btn btn-primary">
+                            View Program
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <p class="text-lg text-base-content/70">You don't have an active program yet.</p>
+                    <a href="/" class="btn btn-primary mt-4">
+                        <i class="fas fa-magic"></i>
+                        Create a New Program
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Workouts -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title text-2xl">
+                    <i class="fas fa-history text-primary"></i>
+                    Recent Activity
+                </h2>
+
+                {% if recent_workouts %}
+                <div class="overflow-x-auto mt-4">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th>Workout</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for workout in recent_workouts %}
+                            <tr>
+                                <td>
+                                    <div class="font-bold">{{ workout.workout_name }}</div>
+                                    <div class="text-sm opacity-50">Week {{ workout.week_number }}, Day {{ workout.day_number }}</div>
+                                </td>
+                                <td>{{ workout.workout_date }}</td>
+                                <td>
+                                    {% if workout.status == 'completed' %}
+                                    <span class="badge badge-success badge-outline">Completed</span>
+                                    {% elif workout.status == 'in_progress' %}
+                                    <span class="badge badge-warning badge-outline">In Progress</span>
+                                    {% else %}
+                                    <span class="badge badge-ghost">{{ workout.status | title }}</span>
+                                    {% endif %}
+                                </td>
+                                <th>
+                                    <a href="/workout/{{ workout.id }}" class="btn btn-ghost btn-xs">details</a>
+                                </th>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <p class="text-base-content/70">No recent workouts to show.</p>
+                    <p class="text-sm text-base-content/50">Complete a workout to see your activity here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -4,28 +4,30 @@ Weightlifting Program Coordinator - Specialized agent for generating science-bas
 
 import asyncio
 import json
-from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 from .base_agent import BaseAgent
 
 
 class WeightliftingCoordinator(BaseAgent):
     """Specialized coordinator for weightlifting program generation"""
-    
+
     def __init__(self):
-        super().__init__(name="WeightliftingCoordinator", model="gpt-4", temperature=0.2)
+        super().__init__(
+            name="WeightliftingCoordinator", model="gpt-4", temperature=0.2
+        )
         self.required_info = {
             "equipment": None,
             "duration_weeks": None,
             "days_per_week": None,
             "user_files": [],
-            "program_request": None
+            "program_request": None,
         }
-        
+
     async def process(self, input_data: Any) -> Dict[str, Any]:
         """Process weightlifting program request"""
-        
+
         if isinstance(input_data, str):
             user_request = input_data
             additional_info = {}
@@ -34,114 +36,121 @@ class WeightliftingCoordinator(BaseAgent):
             additional_info = input_data
         else:
             return {"error": "Invalid input format for weightlifting coordinator"}
-            
+
         # Extract any provided information
         self._extract_provided_info(user_request, additional_info)
-        
+
         # Check if we have all required information
         missing_info = self._check_missing_information()
-        
+
         if missing_info:
             return await self._request_missing_information(missing_info, user_request)
-        
+
         # Generate the program
         return await self._generate_program(user_request)
-    
+
     def _extract_provided_info(self, user_request: str, additional_info: Dict):
         """Extract information from user request and additional data"""
-        
+
         # Extract from additional_info (form data, etc.)
         if "equipment" in additional_info:
             self.required_info["equipment"] = additional_info["equipment"]
-            
+
         if "duration_weeks" in additional_info:
             self.required_info["duration_weeks"] = additional_info["duration_weeks"]
-            
+
         if "days_per_week" in additional_info:
             self.required_info["days_per_week"] = additional_info["days_per_week"]
-            
+
         if "user_files" in additional_info:
             self.required_info["user_files"] = additional_info["user_files"]
-            
+
         self.required_info["program_request"] = user_request
-        
+
         # Try to extract from natural language request
         self._extract_from_natural_language(user_request)
-    
+
     def _extract_from_natural_language(self, user_request: str):
         """Extract information from natural language using AI"""
-        
+
         # Equipment keywords
         equipment_keywords = {
             "full gym": ["full gym", "commercial gym", "complete gym", "gym access"],
             "home gym": ["home gym", "garage gym", "basement gym"],
-            "minimal": ["dumbbells only", "barbell only", "basic equipment", "limited equipment"],
-            "bodyweight": ["bodyweight", "no equipment", "calisthenics"]
+            "minimal": [
+                "dumbbells only",
+                "barbell only",
+                "basic equipment",
+                "limited equipment",
+            ],
+            "bodyweight": ["bodyweight", "no equipment", "calisthenics"],
         }
-        
+
         request_lower = user_request.lower()
-        
+
         # Check for equipment mentions
         for equipment_type, keywords in equipment_keywords.items():
             if any(keyword in request_lower for keyword in keywords):
                 if not self.required_info["equipment"]:
                     self.required_info["equipment"] = equipment_type
                 break
-        
+
         # Check for duration mentions
         import re
-        
+
         # Look for week patterns
-        week_pattern = r'(\d+)\s*week'
+        week_pattern = r"(\d+)\s*week"
         week_match = re.search(week_pattern, request_lower)
         if week_match and not self.required_info["duration_weeks"]:
             self.required_info["duration_weeks"] = int(week_match.group(1))
-            
+
         # Look for days per week patterns
         days_patterns = [
-            r'(\d+)\s*days?\s*per\s*week',
-            r'(\d+)\s*days?\s*a\s*week',
-            r'(\d+)x\s*per\s*week',
-            r'train\s*(\d+)\s*times?'
+            r"(\d+)\s*days?\s*per\s*week",
+            r"(\d+)\s*days?\s*a\s*week",
+            r"(\d+)x\s*per\s*week",
+            r"train\s*(\d+)\s*times?",
         ]
-        
+
         for pattern in days_patterns:
             days_match = re.search(pattern, request_lower)
             if days_match and not self.required_info["days_per_week"]:
                 self.required_info["days_per_week"] = int(days_match.group(1))
                 break
-    
+
     def _check_missing_information(self) -> List[str]:
         """Check what information is still missing"""
         missing = []
-        
+
         if not self.required_info["equipment"]:
             missing.append("equipment")
-            
+
         if not self.required_info["duration_weeks"]:
             missing.append("duration_weeks")
-            
+
         if not self.required_info["days_per_week"]:
             missing.append("days_per_week")
-            
+
         return missing
-    
-    async def _request_missing_information(self, missing_info: List[str], user_request: str) -> Dict[str, Any]:
+
+    async def _request_missing_information(
+        self, missing_info: List[str], user_request: str
+    ) -> Dict[str, Any]:
         """Generate questions to gather missing information"""
-        
+
         system_prompt = """You are a fitness expert helping users create workout programs. 
         The user has made a request but is missing some key information. 
         Generate friendly, specific questions to gather the missing information.
         Be conversational and explain why you need this information."""
-        
+
         missing_descriptions = {
             "equipment": "available gym equipment",
-            "duration_weeks": "program duration in weeks", 
-            "days_per_week": "training frequency (days per week)"
+            "duration_weeks": "program duration in weeks",
+            "days_per_week": "training frequency (days per week)",
         }
-        
+
         missing_list = [missing_descriptions[item] for item in missing_info]
-        
+
         question_prompt = f"""
         User request: "{user_request}"
         
@@ -156,19 +165,19 @@ class WeightliftingCoordinator(BaseAgent):
         
         Make it conversational and explain why each piece of information helps create a better program.
         """
-        
+
         questions = await self.send_message(question_prompt, system_prompt)
-        
+
         return {
             "type": "information_request",
             "missing_info": missing_info,
             "questions": questions,
-            "current_info": self.required_info
+            "current_info": self.required_info,
         }
-    
+
     async def _generate_program(self, user_request: str) -> Dict[str, Any]:
         """Generate the complete weightlifting program"""
-        
+
         system_prompt = """You are a world-class strength and conditioning coach with expertise in:
         - Exercise science and muscle hypertrophy
         - Program periodization and progressive overload
@@ -176,12 +185,12 @@ class WeightliftingCoordinator(BaseAgent):
         - Evidence-based training methodologies
         
         Create detailed, scientifically-backed weightlifting programs based on user requirements."""
-        
+
         # Prepare file context if available
         file_context = ""
         if self.required_info["user_files"]:
             file_context = f"\nUser has provided these relevant files: {self.required_info['user_files']}"
-        
+
         program_prompt = f"""
         Create a comprehensive weightlifting program with these specifications:
         
@@ -232,42 +241,44 @@ class WeightliftingCoordinator(BaseAgent):
         - Clear progression guidelines
         - Exercise substitutions if needed
         """
-        
+
         program_response = await self.send_message(program_prompt, system_prompt)
-        
+
         try:
             program_data = json.loads(program_response)
-            
+
             # Add metadata
             program_data["generated_at"] = datetime.now().isoformat()
             program_data["user_request"] = user_request
             program_data["agent_info"] = {
                 "coordinator": "WeightliftingCoordinator",
                 "model": self.model,
-                "version": "1.0"
+                "version": "1.0",
             }
-            
+
             return {
                 "type": "program_generated",
                 "program": program_data,
-                "success": True
+                "success": True,
             }
-            
+
         except json.JSONDecodeError:
             # Fallback if JSON parsing fails
             return {
                 "type": "program_text",
                 "program_text": program_response,
                 "success": True,
-                "note": "Program generated in text format, may need manual formatting"
+                "note": "Program generated in text format, may need manual formatting",
             }
-    
-    async def modify_workout(self, workout_data: Dict, modification_request: str) -> Dict[str, Any]:
+
+    async def modify_workout(
+        self, workout_data: Dict, modification_request: str
+    ) -> Dict[str, Any]:
         """Modify a specific workout based on user feedback"""
-        
+
         system_prompt = """You are a fitness expert helping modify workouts based on user feedback.
         Make intelligent substitutions while maintaining the program's integrity and goals."""
-        
+
         modification_prompt = f"""
         Original workout: {json.dumps(workout_data, indent=2)}
         
@@ -282,56 +293,58 @@ class WeightliftingCoordinator(BaseAgent):
         
         Return the modified workout in the same JSON format.
         """
-        
+
         modified_response = await self.send_message(modification_prompt, system_prompt)
-        
+
         try:
             modified_workout = json.loads(modified_response)
             return {
                 "success": True,
                 "modified_workout": modified_workout,
-                "modification_applied": modification_request
+                "modification_applied": modification_request,
             }
         except json.JSONDecodeError:
             return {
                 "success": False,
                 "error": "Could not parse modified workout",
-                "text_response": modified_response
+                "text_response": modified_response,
             }
-    
-    async def calculate_progression(self, base_weight: float, week: int, exercise_name: str, progression_scheme: str) -> float:
+
+    async def calculate_progression(
+        self, base_weight: float, week: int, exercise_name: str, progression_scheme: str
+    ) -> float:
         """Calculate recommended weight for a given week based on progression scheme"""
-        
+
         # Common progression schemes
         if "linear" in progression_scheme.lower():
             # Simple linear progression - add weight each week
             increment = 2.5 if "upper" in progression_scheme.lower() else 5.0
             return base_weight + (increment * (week - 1))
-            
+
         elif "percentage" in progression_scheme.lower():
             # Percentage-based progression
             week_multipliers = {
-                1: 1.0,   # 100% - baseline
-                2: 1.025, # 102.5%
+                1: 1.0,  # 100% - baseline
+                2: 1.025,  # 102.5%
                 3: 1.05,  # 105%
-                4: 1.075, # 107.5%
-                5: 1.1,   # 110%
-                6: 1.0,   # Deload week
+                4: 1.075,  # 107.5%
+                5: 1.1,  # 110%
+                6: 1.0,  # Deload week
             }
             multiplier = week_multipliers.get(week % 6 if week % 6 != 0 else 6, 1.0)
             return base_weight * multiplier
-            
+
         else:
             # Default: minimal progression
             return base_weight + (2.5 * (week - 1))
-    
+
     async def get_capabilities(self) -> List[str]:
         """Return weightlifting coordinator capabilities"""
         return [
             "program_generation",
-            "exercise_selection", 
+            "exercise_selection",
             "progression_planning",
             "equipment_adaptation",
             "workout_modification",
-            "science_based_programming"
+            "science_based_programming",
         ]
