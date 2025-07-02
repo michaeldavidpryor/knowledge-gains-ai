@@ -17,7 +17,7 @@ class FitnessWebAgent(BaseAgent):
     """Specialized web search agent for fitness and exercise information"""
 
     def __init__(self):
-        super().__init__(name="FitnessWebAgent", model="gpt-4", temperature=0.3)
+        super().__init__(name="FitnessWebAgent", model="gpt-4-turbo", temperature=0.3)
         self.search_engines = {
             "duckduckgo": self._search_duckduckgo,
             "fitness_sites": self._search_fitness_sites,

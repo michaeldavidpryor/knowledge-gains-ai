@@ -15,7 +15,7 @@ class FileProcessorAgent(BaseAgent):
     """Agent specialized in processing fitness-related documents and extracting workout information"""
 
     def __init__(self, upload_directory: str = "uploads"):
-        super().__init__(name="FileProcessorAgent", model="gpt-4", temperature=0.2)
+        super().__init__(name="FileProcessorAgent", model="gpt-4-turbo", temperature=0.2)
         self.upload_directory = upload_directory
         self.supported_formats = {".pdf", ".txt", ".md", ".doc", ".docx"}
         self.processed_files_cache = {}

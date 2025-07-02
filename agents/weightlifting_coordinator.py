@@ -15,7 +15,7 @@ class WeightliftingCoordinator(BaseAgent):
 
     def __init__(self):
         super().__init__(
-            name="WeightliftingCoordinator", model="gpt-4", temperature=0.2
+            name="WeightliftingCoordinator", model="gpt-4-turbo", temperature=0.2
         )
         self.required_info = {
             "equipment": None,
@@ -24,6 +24,8 @@ class WeightliftingCoordinator(BaseAgent):
             "user_files": [],
             "program_request": None,
         }
+        self.fitness_web_agent = None
+        self.file_processor_agent = None
 
     async def process(self, input_data: Any) -> Dict[str, Any]:
         """Process weightlifting program request"""

@@ -19,7 +19,7 @@ from fastapi import (
     Request,
     UploadFile,
 )
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -139,6 +139,15 @@ async def dashboard(request: Request, user: Dict = Depends(get_current_user)):
             "recent_workouts": recent_workouts,
             "user": user,
         },
+    )
+
+
+@app.get("/streaming-demo", response_class=HTMLResponse)
+async def streaming_demo(request: Request):
+    """Demo page for streaming AI responses"""
+    return templates.TemplateResponse(
+        "streaming_example.html",
+        {"request": request, "title": "Streaming AI Demo - Knowledge Gains"}
     )
 
 
@@ -416,6 +425,89 @@ async def modify_exercise(
             "message": "Failed to modify exercise",
             "details": result,
         })
+
+
+@app.post("/api/chat-stream")
+async def chat_stream(
+    request: Request,
+    message: str = Form(...),
+    user: Dict = Depends(get_current_user)
+):
+    """Stream AI responses in real-time for interactive coaching"""
+    
+    async def generate():
+        # Use the coordinator's streaming capability
+        system_prompt = """You are an expert strength training coach. 
+        Provide helpful, science-based advice about weightlifting, programming, 
+        technique, and recovery. Be concise but informative."""
+        
+        try:
+            # Use the new streaming generator method
+            async for chunk in coordinator.send_message_stream_generator(
+                message=message,
+                system_prompt=system_prompt
+            ):
+                # Format as Server-Sent Events
+                yield f"data: {chunk}\n\n"
+        except Exception as e:
+            yield f"data: Error: {str(e)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # Disable Nginx buffering
+        }
+    )
+
+
+@app.post("/api/analyze-form-stream")
+async def analyze_form_stream(
+    file: UploadFile = File(...),
+    exercise_name: str = Form(...),
+    user: Dict = Depends(get_current_user)
+):
+    """Stream real-time form analysis for uploaded videos/images"""
+    
+    # Save uploaded file temporarily
+    upload_dir = Path("uploads") / user["id"] / "temp"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_path = upload_dir / file.filename
+    async with aiofiles.open(file_path, "wb") as f:
+        content = await file.read()
+        await f.write(content)
+    
+    async def generate():
+        try:
+            # Process with file processor agent using streaming
+            analysis_prompt = f"""Analyze this {exercise_name} form. 
+            Provide real-time feedback on:
+            1. Technique correctness
+            2. Common mistakes to avoid
+            3. Safety considerations
+            4. Improvement suggestions
+            
+            File: {file.filename}"""
+            
+            async for chunk in file_processor.send_message_stream_generator(
+                message=analysis_prompt,
+                system_prompt="You are an expert in biomechanics and exercise form analysis."
+            ):
+                yield f"data: {chunk}\n\n"
+                
+            # Clean up temp file
+            file_path.unlink(missing_ok=True)
+            
+        except Exception as e:
+            yield f"data: Error: {str(e)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream"
+    )
 
 
 @app.post("/api/upload-files")

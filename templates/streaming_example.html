@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streaming AI Coach - Knowledge Gains</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">AI Streaming Coach Demo</h1>
+        
+        <!-- Chat Stream Example -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Real-time AI Coaching Chat</h2>
+            
+            <form id="chat-form" class="mb-4">
+                <div class="flex gap-2">
+                    <input 
+                        type="text" 
+                        id="chat-input" 
+                        name="message"
+                        placeholder="Ask about training, nutrition, or technique..."
+                        class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                    <button 
+                        type="submit"
+                        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                    >
+                        Send
+                    </button>
+                </div>
+            </form>
+            
+            <div id="chat-response" class="prose max-w-none">
+                <div class="text-gray-500">AI response will appear here...</div>
+            </div>
+        </div>
+        
+        <!-- Form Analysis Example -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Exercise Form Analysis</h2>
+            
+            <form id="form-analysis" class="space-y-4">
+                <div>
+                    <label for="exercise-select" class="block text-sm font-medium mb-2">
+                        Exercise Name
+                    </label>
+                    <select 
+                        id="exercise-select" 
+                        name="exercise_name"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                        <option value="">Select an exercise...</option>
+                        <option value="squat">Squat</option>
+                        <option value="deadlift">Deadlift</option>
+                        <option value="bench_press">Bench Press</option>
+                        <option value="overhead_press">Overhead Press</option>
+                        <option value="row">Row</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="form-file" class="block text-sm font-medium mb-2">
+                        Upload Video/Image
+                    </label>
+                    <input 
+                        type="file" 
+                        id="form-file" 
+                        name="file"
+                        accept="image/*,video/*"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                    >
+                </div>
+                
+                <button 
+                    type="submit"
+                    class="w-full px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                >
+                    Analyze Form
+                </button>
+            </form>
+            
+            <div id="form-response" class="mt-6 prose max-w-none">
+                <div class="text-gray-500">Form analysis will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chat streaming functionality
+        document.getElementById('chat-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const input = document.getElementById('chat-input');
+            const responseDiv = document.getElementById('chat-response');
+            const message = input.value;
+            
+            // Clear previous response and show loading
+            responseDiv.innerHTML = '<div class="text-gray-500">AI is thinking...</div>';
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('message', message);
+            
+            try {
+                const response = await fetch('/api/chat-stream', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                responseDiv.innerHTML = '<div class="whitespace-pre-wrap"></div>';
+                const contentDiv = responseDiv.firstChild;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data.trim()) {
+                                contentDiv.textContent += data;
+                            }
+                        }
+                    }
+                }
+                
+                // Clear input
+                input.value = '';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                responseDiv.innerHTML = `<div class="text-red-500">Error: ${error.message}</div>`;
+            }
+        });
+        
+        // Form analysis streaming functionality
+        document.getElementById('form-analysis').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            const responseDiv = document.getElementById('form-response');
+            
+            // Clear previous response
+            responseDiv.innerHTML = '<div class="text-gray-500">Analyzing your form...</div>';
+            
+            const formData = new FormData(form);
+            
+            try {
+                const response = await fetch('/api/analyze-form-stream', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                responseDiv.innerHTML = '<div class="whitespace-pre-wrap"></div>';
+                const contentDiv = responseDiv.firstChild;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data.trim()) {
+                                contentDiv.textContent += data;
+                            }
+                        }
+                    }
+                }
+                
+                // Reset form
+                form.reset();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                responseDiv.innerHTML = `<div class="text-red-500">Error: ${error.message}</div>`;
+            }
+        });
+    </script>
+</body>
+</html>
