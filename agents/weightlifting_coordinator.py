@@ -15,7 +15,7 @@ class WeightliftingCoordinator(BaseAgent):
 
     def __init__(self):
         super().__init__(
-            name="WeightliftingCoordinator", model="gpt-4-turbo", temperature=0.2
+            name="WeightliftingCoordinator", model="gpt-4.1-2025-04-14", temperature=0.2
         )
         self.required_info = {
             "equipment": None,
@@ -168,7 +168,8 @@ class WeightliftingCoordinator(BaseAgent):
         Make it conversational and explain why each piece of information helps create a better program.
         """
 
-        questions = await self.send_message(question_prompt, system_prompt)
+        full_prompt = f"{system_prompt}\n\n{question_prompt}"
+        questions = await self.send_message(full_prompt)
 
         return {
             "type": "information_request",
@@ -244,7 +245,8 @@ class WeightliftingCoordinator(BaseAgent):
         - Exercise substitutions if needed
         """
 
-        program_response = await self.send_message(program_prompt, system_prompt)
+        full_program_prompt = f"{system_prompt}\n\n{program_prompt}"
+        program_response = await self.send_message(full_program_prompt)
 
         try:
             program_data = json.loads(program_response)
@@ -296,7 +298,8 @@ class WeightliftingCoordinator(BaseAgent):
         Return the modified workout in the same JSON format.
         """
 
-        modified_response = await self.send_message(modification_prompt, system_prompt)
+        full_mod_prompt = f"{system_prompt}\n\n{modification_prompt}"
+        modified_response = await self.send_message(full_mod_prompt)
 
         try:
             modified_workout = json.loads(modified_response)

@@ -94,14 +94,17 @@ class FileProcessorAgent(BaseAgent):
             }
         
         try:
-            # Create a vector store for the files
-            vector_store_name = f"workout_docs_{len(valid_files)}_files"
-            self.vector_store_id = await self.create_vector_store(
-                name=vector_store_name,
-                file_paths=valid_files
-            )
-            
-            # Analyze the files
+            # Upload files to OpenAI and collect file IDs for file_search tool
+            file_ids: List[str] = []
+            for path in valid_files:
+                try:
+                    with open(path, "rb") as f:
+                        up_file = await self.client.files.create(file=f, purpose="file_search")
+                        file_ids.append(up_file.id)
+                except Exception as e:
+                    skipped_files.append({"path": path, "reason": str(e)})
+
+            # Analyze the files with file_search tool
             analysis_prompt = f"""Analyze the uploaded fitness documents and extract:
             
             1. **Workout Programs**: All exercises, sets, reps, rest periods, and progression schemes
@@ -114,7 +117,19 @@ class FileProcessorAgent(BaseAgent):
             
             Files analyzed: {len(valid_files)}"""
             
-            response = await self.send_message(analysis_prompt)
+            # Build input items referencing files (attachments)
+            input_items = [
+                {
+                    "role": "user",
+                    "type": "message",
+                    "content": [
+                        {"type": "input_text", "text": analysis_prompt}
+                    ],
+                    "attachments": [{"file_id": fid} for fid in file_ids] if file_ids else None,
+                }
+            ]
+
+            response = await self.send_message(input_items, extra_tools=[{"type": "file_search"}])
             
             # Try to extract structured data
             structured_data = self._extract_structured_data(response)
@@ -124,7 +139,7 @@ class FileProcessorAgent(BaseAgent):
                 "files_processed": len(valid_files),
                 "analysis": response,
                 "structured_data": structured_data,
-                "vector_store_id": self.vector_store_id,
+                "file_ids": file_ids,
                 "skipped_files": skipped_files
             }
             
@@ -167,8 +182,10 @@ class FileProcessorAgent(BaseAgent):
             await self.initialize()
         
         # Upload file for code interpreter
-        file_id = await self.upload_file_for_code_interpreter(file_path)
-        
+        with open(file_path, "rb") as f:
+            up_file = await self.client.files.create(file=f, purpose="code_interpreter")
+            file_id = up_file.id
+
         extraction_prompt = """Extract the workout program from this file and structure it as JSON:
         {
             "program_name": "string",
@@ -195,7 +212,19 @@ class FileProcessorAgent(BaseAgent):
         
         Use the code interpreter to process and structure the data."""
         
-        response = await self.send_message(extraction_prompt, file_ids=[file_id])
+        # Build input item with attachment
+        input_items = [
+            {
+                "role": "user",
+                "type": "message",
+                "content": [
+                    {"type": "input_text", "text": extraction_prompt}
+                ],
+                "attachments": [{"file_id": file_id}]
+            }
+        ]
+
+        response = await self.send_message(input_items, extra_tools=[{"type": "code_interpreter"}])
         
         # Extract JSON from response
         structured_program = self._extract_json_from_response(response)
@@ -226,7 +255,20 @@ class FileProcessorAgent(BaseAgent):
         
         Use file search to find relevant information in the uploaded documents."""
         
-        response = await self.send_message(prompt, file_ids=file_ids)
+        if file_ids:
+            input_items = [
+                {
+                    "role": "user",
+                    "type": "message",
+                    "content": [
+                        {"type": "input_text", "text": prompt}
+                    ],
+                    "attachments": [{"file_id": fid} for fid in file_ids]
+                }
+            ]
+            response = await self.send_message(input_items, extra_tools=[{"type": "file_search"}])
+        else:
+            response = await self.send_message(prompt)
         
         return {
             "type": "form_analysis",

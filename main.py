@@ -443,10 +443,8 @@ async def chat_stream(
         
         try:
             # Use the new streaming generator method
-            async for chunk in coordinator.send_message_stream_generator(
-                message=message,
-                system_prompt=system_prompt
-            ):
+            full_prompt = f"{system_prompt}\n\n{message}"
+            async for chunk in coordinator.send_message_stream_generator(full_prompt):
                 # Format as Server-Sent Events
                 yield f"data: {chunk}\n\n"
         except Exception as e:
@@ -492,10 +490,11 @@ async def analyze_form_stream(
             
             File: {file.filename}"""
             
-            async for chunk in file_processor.send_message_stream_generator(
-                message=analysis_prompt,
-                system_prompt="You are an expert in biomechanics and exercise form analysis."
-            ):
+            full_prompt = (
+                "You are an expert in biomechanics and exercise form analysis.\n\n"
+                + analysis_prompt
+            )
+            async for chunk in file_processor.send_message_stream_generator(full_prompt):
                 yield f"data: {chunk}\n\n"
                 
             # Clean up temp file
