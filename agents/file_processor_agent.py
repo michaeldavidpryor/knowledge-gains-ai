@@ -1,8 +1,8 @@
 """
-File Processor Agent for Knowledge Gains - Handles fitness-related document processing
+File Processor Agent for analyzing uploaded fitness documents
+Using OpenAI Assistants API with file search and code interpreter
 """
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -12,366 +12,264 @@ from .base_agent import BaseAgent
 
 
 class FileProcessorAgent(BaseAgent):
-    """Agent specialized in processing fitness-related documents and extracting workout information"""
+    """Agent specialized in processing fitness-related documents using Assistants API"""
 
     def __init__(self, upload_directory: str = "uploads"):
-        super().__init__(name="FileProcessorAgent", model="gpt-4-turbo", temperature=0.2)
+        super().__init__(name="FileProcessorAgent", model="gpt-4.1-2025-04-14", temperature=0.2)
         self.upload_directory = upload_directory
-        self.supported_formats = {".pdf", ".txt", ".md", ".doc", ".docx"}
+        self.supported_formats = {".pdf", ".txt", ".md", ".doc", ".docx", ".csv", ".xlsx", ".json"}
         self.processed_files_cache = {}
+        self.vector_store_id = None
 
         # Create upload directory if it doesn't exist
         Path(upload_directory).mkdir(parents=True, exist_ok=True)
 
-    async def process(self, input_data: Any) -> Dict[str, Any]:
-        """Process uploaded fitness files and extract relevant information"""
-
-        if isinstance(input_data, dict):
-            file_info = input_data
-        else:
-            return {"error": "Invalid input format for file processor"}
-
-        file_paths = file_info.get("file_paths", [])
-        context_request = file_info.get(
-            "context", "extract workout and fitness information"
+    async def initialize(self):
+        """Initialize the assistant with file processing capabilities"""
+        instructions = """You are an expert fitness document analyzer specializing in:
+        - Extracting workout programs from various document formats
+        - Analyzing exercise form descriptions and cues
+        - Identifying training principles and methodologies
+        - Extracting nutrition information and meal plans
+        - Understanding periodization and programming concepts
+        
+        When analyzing documents:
+        1. Extract all relevant workout information including exercises, sets, reps, and progression schemes
+        2. Identify key training principles and methodologies
+        3. Note any specific form cues or technique descriptions
+        4. Extract nutrition guidelines if present
+        5. Provide structured output in JSON format when possible
+        
+        Use the file search tool to analyze uploaded documents and the code interpreter for data processing."""
+        
+        await self.initialize_assistant(
+            instructions=instructions,
+            tools=["file_search", "code_interpreter"]
         )
 
-        if not file_paths:
-            return {"error": "No files provided for processing"}
-
-        results = []
-
-        for file_path in file_paths:
-            try:
-                file_result = await self._process_single_file(
-                    file_path, context_request
-                )
-                results.append(file_result)
-            except Exception as e:
-                results.append({
-                    "file_path": file_path,
-                    "error": str(e),
-                    "processed": False,
-                })
-
-        # Synthesize information across all files
-        synthesis = await self._synthesize_file_information(results, context_request)
-
+    async def process(self, input_data: Any) -> Dict[str, Any]:
+        """Process uploaded fitness files and extract relevant information"""
+        
+        # Initialize assistant if not already done
+        if not self.assistant_id:
+            await self.initialize()
+        
+        # Handle different input types
+        if isinstance(input_data, dict):
+            if "file_paths" in input_data:
+                return await self._process_files(input_data["file_paths"])
+            elif "file_path" in input_data:
+                return await self._process_files([input_data["file_path"]])
+            elif "analyze_request" in input_data:
+                return await self._analyze_with_context(input_data)
+        
         return {
-            "type": "file_processing_complete",
-            "individual_files": results,
-            "synthesis": synthesis,
-            "files_processed": len([r for r in results if r.get("processed", False)]),
-            "total_files": len(results),
+            "type": "error",
+            "message": "Invalid input format",
+            "expected": "Dictionary with 'file_paths' or 'file_path' key"
         }
 
-    async def _process_single_file(
-        self, file_path: str, context_request: str
-    ) -> Dict[str, Any]:
-        """Process a single file and extract fitness-relevant information"""
-
-        # Check cache first
-        file_hash = self._get_file_hash(file_path)
-        if file_hash in self.processed_files_cache:
-            cached_result = self.processed_files_cache[file_hash]
-            cached_result["from_cache"] = True
-            return cached_result
-
-        # Read file content
-        content = await self._read_file_content(file_path)
-        if not content:
-            return {
-                "file_path": file_path,
-                "error": "Could not read file content",
-                "processed": False,
-            }
-
-        # Extract fitness information using AI
-        system_prompt = """You are a fitness and exercise science expert. Analyze documents for:
-        1. Workout programs and routines
-        2. Exercise specifications (sets, reps, weights, progression)
-        3. Training principles and methodologies
-        4. Equipment requirements
-        5. Scientific findings related to strength training
-        6. Progression schemes and periodization
+    async def _process_files(self, file_paths: List[str]) -> Dict[str, Any]:
+        """Process multiple files using file search"""
         
-        Extract specific, actionable information that can be used to create workout programs."""
-
-        analysis_prompt = f"""
-        Analyze this fitness/exercise document and extract key information:
+        valid_files = []
+        skipped_files = []
         
-        File: {os.path.basename(file_path)}
-        Context request: {context_request}
-        
-        Content: {content[:8000]}  # Limit content to avoid token limits
-        
-        Extract and return the following in JSON format:
-        {{
-            "document_type": "research_paper|workout_program|exercise_guide|nutrition_guide|other",
-            "key_findings": ["list", "of", "key", "points"],
-            "workout_programs": [
-                {{
-                    "name": "Program name",
-                    "description": "Brief description",
-                    "duration": "Duration in weeks",
-                    "frequency": "Days per week",
-                    "exercises": ["exercise", "names"],
-                    "equipment": ["required", "equipment"],
-                    "progression": "How to progress"
-                }}
-            ],
-            "exercises": [
-                {{
-                    "name": "Exercise name",
-                    "muscle_groups": ["targeted", "muscles"],
-                    "equipment": "required equipment",
-                    "sets_reps": "typical sets x reps",
-                    "notes": "form cues or variations"
-                }}
-            ],
-            "training_principles": ["principle1", "principle2"],
-            "equipment_mentioned": ["equipment", "list"],
-            "scientific_evidence": "Summary of any research findings",
-            "practical_applications": "How this information can be applied to programming"
-        }}
-        """
-
-        analysis_response = await self.send_message(analysis_prompt, system_prompt)
-
-        try:
-            analysis_data = json.loads(analysis_response)
-
-            result = {
-                "file_path": file_path,
-                "file_name": os.path.basename(file_path),
-                "file_hash": file_hash,
-                "content_length": len(content),
-                "analysis": analysis_data,
-                "processed": True,
-                "from_cache": False,
-            }
-
-            # Cache the result
-            self.processed_files_cache[file_hash] = result
-
-            return result
-
-        except json.JSONDecodeError:
-            # Fallback to text analysis if JSON parsing fails
-            return {
-                "file_path": file_path,
-                "file_name": os.path.basename(file_path),
-                "file_hash": file_hash,
-                "content_length": len(content),
-                "analysis_text": analysis_response,
-                "processed": True,
-                "from_cache": False,
-                "note": "Analysis in text format due to parsing error",
-            }
-
-    async def _read_file_content(self, file_path: str) -> Optional[str]:
-        """Read content from various file formats"""
-
-        file_ext = Path(file_path).suffix.lower()
-
-        try:
-            if file_ext == ".pdf":
-                return await self._read_pdf(file_path)
-            elif file_ext in {".txt", ".md"}:
-                return await self._read_text_file(file_path)
-            elif file_ext in {".doc", ".docx"}:
-                return await self._read_word_doc(file_path)
+        # Validate files
+        for file_path in file_paths:
+            path = Path(file_path)
+            if path.exists() and path.suffix in self.supported_formats:
+                valid_files.append(str(path))
             else:
-                # Try to read as text
-                return await self._read_text_file(file_path)
-
-        except Exception as e:
-            print(f"Error reading file {file_path}: {e}")
-            return None
-
-    async def _read_pdf(self, file_path: str) -> Optional[str]:
-        """Read PDF content using PyPDF2 or similar"""
-        try:
-            import PyPDF2
-
-            with open(file_path, "rb") as file:
-                reader = PyPDF2.PdfReader(file)
-                text = ""
-                for page in reader.pages:
-                    text += page.extract_text() + "\n"
-                return text
-
-        except ImportError:
-            return "PyPDF2 not installed - cannot process PDF files"
-        except Exception as e:
-            return f"Error reading PDF: {str(e)}"
-
-    async def _read_text_file(self, file_path: str) -> Optional[str]:
-        """Read plain text files"""
-        try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
-                return file.read()
-        except Exception as e:
-            return f"Error reading text file: {str(e)}"
-
-    async def _read_word_doc(self, file_path: str) -> Optional[str]:
-        """Read Word documents using python-docx"""
-        try:
-            import docx
-
-            doc = docx.Document(file_path)
-            text = ""
-            for paragraph in doc.paragraphs:
-                text += paragraph.text + "\n"
-            return text
-
-        except ImportError:
-            return "python-docx not installed - cannot process Word documents"
-        except Exception as e:
-            return f"Error reading Word document: {str(e)}"
-
-    def _get_file_hash(self, file_path: str) -> str:
-        """Generate hash of file for caching"""
-        try:
-            with open(file_path, "rb") as file:
-                file_hash = hashlib.md5(file.read()).hexdigest()
-            return file_hash
-        except Exception:
-            return hashlib.md5(file_path.encode()).hexdigest()
-
-    async def _synthesize_file_information(
-        self, file_results: List[Dict], context_request: str
-    ) -> Dict[str, Any]:
-        """Synthesize information from multiple processed files"""
-
-        if not file_results:
-            return {"error": "No files to synthesize"}
-
-        # Gather all successful analyses
-        successful_analyses = [
-            result["analysis"]
-            for result in file_results
-            if result.get("processed") and "analysis" in result
-        ]
-
-        if not successful_analyses:
-            return {"error": "No successful file analyses to synthesize"}
-
-        system_prompt = """You are a fitness programming expert. Synthesize information from multiple fitness documents to create comprehensive insights for workout program creation."""
-
-        synthesis_prompt = f"""
-        Synthesize the following fitness document analyses into actionable insights:
+                skipped_files.append({
+                    "path": file_path,
+                    "reason": "File not found" if not path.exists() else f"Unsupported format: {path.suffix}"
+                })
         
-        Context: {context_request}
+        if not valid_files:
+            return {
+                "type": "error",
+                "message": "No valid files to process",
+                "skipped_files": skipped_files
+            }
         
-        Document Analyses:
-        {json.dumps(successful_analyses, indent=2)}
+        try:
+            # Create a vector store for the files
+            vector_store_name = f"workout_docs_{len(valid_files)}_files"
+            self.vector_store_id = await self.create_vector_store(
+                name=vector_store_name,
+                file_paths=valid_files
+            )
+            
+            # Analyze the files
+            analysis_prompt = f"""Analyze the uploaded fitness documents and extract:
+            
+            1. **Workout Programs**: All exercises, sets, reps, rest periods, and progression schemes
+            2. **Training Methodology**: Periodization, volume, intensity, frequency principles
+            3. **Exercise Techniques**: Form cues, common mistakes, safety considerations
+            4. **Nutrition Information**: Meal plans, macros, timing, supplements
+            5. **Recovery Protocols**: Rest days, deload weeks, mobility work
+            
+            Provide a comprehensive analysis with structured JSON output for workout programs.
+            
+            Files analyzed: {len(valid_files)}"""
+            
+            response = await self.send_message(analysis_prompt)
+            
+            # Try to extract structured data
+            structured_data = self._extract_structured_data(response)
+            
+            return {
+                "type": "file_analysis_complete",
+                "files_processed": len(valid_files),
+                "analysis": response,
+                "structured_data": structured_data,
+                "vector_store_id": self.vector_store_id,
+                "skipped_files": skipped_files
+            }
+            
+        except Exception as e:
+            return {
+                "type": "error",
+                "message": f"Error processing files: {str(e)}",
+                "files_attempted": valid_files
+            }
+
+    async def _analyze_with_context(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze specific aspects of previously uploaded files"""
         
-        Create a comprehensive synthesis in JSON format:
-        {{
-            "overall_themes": ["key", "themes", "across", "documents"],
-            "recommended_programs": [
-                {{
-                    "name": "Synthesized program name",
-                    "description": "Combined approach description",
-                    "best_for": "Who this program is best for",
-                    "duration": "Recommended duration",
-                    "frequency": "Training frequency",
-                    "key_exercises": ["essential", "exercises"],
-                    "equipment_needed": ["equipment", "list"],
-                    "progression_strategy": "How to progress"
-                }}
+        request = input_data.get("analyze_request", "")
+        context = input_data.get("context", {})
+        
+        if not self.thread_id:
+            await self.create_thread()
+        
+        # Build analysis prompt
+        prompt = f"""Based on the uploaded fitness documents, {request}
+        
+        Context: {json.dumps(context, indent=2) if context else 'General analysis'}
+        
+        Provide detailed analysis with practical recommendations."""
+        
+        response = await self.send_message(prompt)
+        
+        return {
+            "type": "contextual_analysis",
+            "request": request,
+            "analysis": response,
+            "context": context
+        }
+
+    async def extract_workout_program(self, file_path: str) -> Dict[str, Any]:
+        """Extract a structured workout program from a file"""
+        
+        if not self.assistant_id:
+            await self.initialize()
+        
+        # Upload file for code interpreter
+        file_id = await self.upload_file_for_code_interpreter(file_path)
+        
+        extraction_prompt = """Extract the workout program from this file and structure it as JSON:
+        {
+            "program_name": "string",
+            "duration_weeks": number,
+            "days_per_week": number,
+            "workouts": [
+                {
+                    "day": "string",
+                    "name": "string",
+                    "exercises": [
+                        {
+                            "name": "string",
+                            "sets": number,
+                            "reps": "string",
+                            "rest": "string",
+                            "notes": "string"
+                        }
+                    ]
+                }
             ],
-            "key_principles": ["training", "principles", "to", "follow"],
-            "equipment_recommendations": ["equipment", "priorities"],
-            "scientific_backing": "Summary of scientific evidence",
-            "implementation_tips": ["practical", "tips", "for", "implementation"],
-            "program_variations": ["beginner", "intermediate", "advanced"]
-        }}
-        """
-
-        synthesis_response = await self.send_message(synthesis_prompt, system_prompt)
-
-        try:
-            synthesis_data = json.loads(synthesis_response)
-            return {
-                "synthesis": synthesis_data,
-                "source_files": len(successful_analyses),
-                "synthesis_type": "json",
-            }
-        except json.JSONDecodeError:
-            return {
-                "synthesis_text": synthesis_response,
-                "source_files": len(successful_analyses),
-                "synthesis_type": "text",
-            }
-
-    async def extract_specific_program(
-        self, file_path: str, program_name: str
-    ) -> Dict[str, Any]:
-        """Extract a specific workout program from a document"""
-
-        content = await self._read_file_content(file_path)
-        if not content:
-            return {"error": f"Could not read file: {file_path}"}
-
-        system_prompt = f"""You are a fitness expert extracting specific workout programs from documents. 
-        Focus on finding the program named "{program_name}" or the most similar program."""
-
-        extraction_prompt = f"""
-        Find and extract the workout program "{program_name}" from this document:
+            "progression_scheme": "string",
+            "notes": "string"
+        }
         
-        {content[:8000]}
+        Use the code interpreter to process and structure the data."""
         
-        Return detailed program information in JSON format:
-        {{
-            "program_found": true/false,
-            "program_name": "Actual program name found",
-            "similarity_score": "How closely it matches the request (1-10)",
-            "program_details": {{
-                "description": "Program description",
-                "duration": "Duration in weeks",
-                "frequency": "Days per week",
-                "weekly_structure": [
-                    {{
-                        "day": 1,
-                        "name": "Workout name",
-                        "exercises": [
-                            {{
-                                "name": "Exercise name",
-                                "sets": 4,
-                                "reps": "8-12",
-                                "weight": "percentage of 1RM or description",
-                                "rest": "rest time",
-                                "notes": "any special notes"
-                            }}
-                        ]
-                    }}
-                ],
-                "equipment_required": ["equipment", "list"],
-                "progression": "How to progress week to week"
-            }}
-        }}
-        """
+        response = await self.send_message(extraction_prompt, file_ids=[file_id])
+        
+        # Extract JSON from response
+        structured_program = self._extract_json_from_response(response)
+        
+        return {
+            "type": "workout_extraction",
+            "file": file_path,
+            "program": structured_program,
+            "raw_response": response
+        }
 
-        extraction_response = await self.send_message(extraction_prompt, system_prompt)
+    async def analyze_exercise_form(self, exercise_name: str, file_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Analyze exercise form and technique from documents"""
+        
+        if not self.assistant_id:
+            await self.initialize()
+        
+        prompt = f"""Analyze the exercise form and technique for: {exercise_name}
+        
+        Extract and provide:
+        1. Setup and starting position
+        2. Movement execution (step by step)
+        3. Common form errors to avoid
+        4. Safety considerations
+        5. Muscle groups targeted
+        6. Variations and progressions
+        7. Programming recommendations
+        
+        Use file search to find relevant information in the uploaded documents."""
+        
+        response = await self.send_message(prompt, file_ids=file_ids)
+        
+        return {
+            "type": "form_analysis",
+            "exercise": exercise_name,
+            "analysis": response,
+            "timestamp": os.path.getmtime(file_ids[0]) if file_ids else None
+        }
 
+    def _extract_structured_data(self, text: str) -> Optional[Dict[str, Any]]:
+        """Extract structured JSON data from text response"""
         try:
-            return json.loads(extraction_response)
+            # Look for JSON blocks in the text
+            import re
+            json_pattern = r'```json\s*([\s\S]*?)\s*```'
+            matches = re.findall(json_pattern, text)
+            
+            if matches:
+                return json.loads(matches[0])
+            
+            # Try to find JSON without code blocks
+            json_start = text.find('{')
+            json_end = text.rfind('}')
+            
+            if json_start != -1 and json_end != -1:
+                potential_json = text[json_start:json_end + 1]
+                return json.loads(potential_json)
+                
         except json.JSONDecodeError:
-            return {
-                "program_found": False,
-                "error": "Could not parse program extraction",
-                "raw_response": extraction_response,
-            }
+            pass
+        
+        return None
+
+    def _extract_json_from_response(self, response: str) -> Optional[Dict[str, Any]]:
+        """Extract JSON from assistant response"""
+        return self._extract_structured_data(response)
 
     async def get_capabilities(self) -> List[str]:
-        """Return file processing capabilities"""
-        return [
-            "pdf_processing",
+        """Return list of agent capabilities"""
+        base_capabilities = await super().get_capabilities()
+        return base_capabilities + [
             "document_analysis",
-            "workout_extraction",
-            "program_synthesis",
-            "exercise_database_creation",
-            "scientific_literature_analysis",
+            "workout_extraction", 
+            "form_analysis",
+            "nutrition_extraction",
+            "multi_file_processing"
         ]

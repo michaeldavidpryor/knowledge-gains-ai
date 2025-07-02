@@ -1,11 +1,10 @@
 """
-Fitness Web Search Agent for Knowledge Gains - Specialized for fitness and exercise research
+Fitness Web Agent for searching and analyzing fitness information
+Using OpenAI Assistants API with function calling for web search
 """
 
-import asyncio
 import json
-from typing import Any, Dict, List
-from urllib.parse import quote_plus
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -14,344 +13,409 @@ from .base_agent import BaseAgent
 
 
 class FitnessWebAgent(BaseAgent):
-    """Specialized web search agent for fitness and exercise information"""
+    """Specialized web search agent for fitness information using Assistants API"""
 
     def __init__(self):
-        super().__init__(name="FitnessWebAgent", model="gpt-4-turbo", temperature=0.3)
+        super().__init__(name="FitnessWebAgent", model="gpt-4.1-2025-04-14", temperature=0.3)
         self.search_engines = {
             "duckduckgo": self._search_duckduckgo,
             "fitness_sites": self._search_fitness_sites,
         }
-
-        # Fitness-specific search sources
         self.fitness_sites = [
             "strongerbyscience.com",
-            "athleanx.com",
+            "barbellmedicine.com", 
             "t-nation.com",
             "bodybuilding.com",
-            "muscleandstrength.com",
-            "jeremyethier.com",
-            "jeffnippard.com",
+            "ncbi.nlm.nih.gov",
+            "pubmed.ncbi.nlm.nih.gov",
         ]
 
-    async def process(self, input_data: Any) -> Dict[str, Any]:
-        """Process web search requests for fitness information"""
-
-        if isinstance(input_data, str):
-            search_query = input_data
-            search_type = "general"
-        elif isinstance(input_data, dict):
-            search_query = input_data.get("query", "")
-            search_type = input_data.get("type", "general")
-        else:
-            return {"error": "Invalid input format for fitness web agent"}
-
-        if not search_query:
-            return {"error": "No search query provided"}
-
-        # Enhance query with fitness context
-        enhanced_query = self._enhance_fitness_query(search_query, search_type)
-
-        # Perform searches using multiple sources
-        search_tasks = [
-            self._search_duckduckgo(enhanced_query),
-            self._search_fitness_sites(enhanced_query),
-        ]
-
-        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-
-        # Combine and analyze results
-        combined_results = []
-        for i, result in enumerate(search_results):
-            if isinstance(result, Exception):
-                print(f"Search engine {i} failed: {result}")
-                continue
-            if isinstance(result, list):
-                combined_results.extend(result)
-
-        if not combined_results:
-            return {"error": "No search results found", "query": enhanced_query}
-
-        # Analyze and synthesize fitness information
-        analysis = await self._analyze_fitness_results(
-            combined_results, search_query, search_type
+    async def initialize(self):
+        """Initialize the assistant with web search capabilities"""
+        instructions = """You are an expert fitness and exercise science researcher specializing in:
+        - Strength training and powerlifting programming
+        - Exercise biomechanics and technique
+        - Sports nutrition and supplementation
+        - Recovery and injury prevention
+        - Scientific literature analysis
+        
+        When searching for information:
+        1. Prioritize peer-reviewed scientific studies
+        2. Look for evidence-based recommendations
+        3. Consider the source credibility
+        4. Extract practical applications
+        5. Synthesize multiple sources for comprehensive answers
+        
+        You can search the web using function calls to find the most up-to-date and accurate information."""
+        
+        # Note: Web search will be implemented via function calling
+        await self.initialize_assistant(
+            instructions=instructions,
+            tools=[]  # No built-in tools, we'll use function calling
         )
 
+    async def process(self, input_data: Any) -> Dict[str, Any]:
+        """Process fitness-related web search requests"""
+        
+        # Initialize assistant if not already done
+        if not self.assistant_id:
+            await self.initialize()
+        
+        if isinstance(input_data, str):
+            query = input_data
+            search_type = "general"
+        elif isinstance(input_data, dict):
+            query = input_data.get("query", "")
+            search_type = input_data.get("search_type", "general")
+        else:
+            return {
+                "type": "error",
+                "message": "Invalid input format",
+                "expected": "String query or dictionary with 'query' key"
+            }
+
+        # Perform search based on type
+        if search_type == "scientific":
+            return await self._search_scientific_literature(query)
+        elif search_type == "technique":
+            return await self._search_exercise_technique(query)
+        elif search_type == "program":
+            return await self._search_workout_programs(query)
+        else:
+            return await self._general_fitness_search(query)
+
+    async def _general_fitness_search(self, query: str) -> Dict[str, Any]:
+        """Perform general fitness-related web search"""
+        
+        # Search using multiple sources
+        search_results = await self._perform_web_search(query)
+        
+        if not search_results:
+            return {
+                "type": "search_error", 
+                "message": "No search results found",
+                "query": query
+            }
+        
+        # Analyze results with AI
+        analysis_prompt = f"""Analyze these web search results for: "{query}"
+        
+        Search Results:
+        {json.dumps(search_results[:5], indent=2)}
+        
+        Provide:
+        1. Key findings and recommendations
+        2. Scientific evidence (if any)
+        3. Practical applications
+        4. Source credibility assessment
+        5. Additional considerations
+        
+        Format as a comprehensive yet concise response."""
+        
+        response = await self.send_message(analysis_prompt)
+        
         return {
-            "type": "fitness_web_search_complete",
-            "original_query": search_query,
-            "enhanced_query": enhanced_query,
-            "search_type": search_type,
-            "raw_results": combined_results[:10],  # Limit raw results
-            "analysis": analysis,
-            "results_count": len(combined_results),
+            "type": "web_search_complete",
+            "query": query,
+            "analysis": response,
+            "sources": search_results[:5],
+            "search_type": "general"
         }
 
-    def _enhance_fitness_query(self, query: str, search_type: str) -> str:
-        """Enhance search query with fitness-specific terms"""
-
-        query_lower = query.lower()
-
-        # Add context based on search type
-        if search_type == "program":
-            if "program" not in query_lower and "routine" not in query_lower:
-                query += " workout program routine"
-
-        elif search_type == "exercise":
-            if "exercise" not in query_lower and "movement" not in query_lower:
-                query += " exercise form technique"
-
-        elif search_type == "research":
-            query += " research study evidence science"
-
-        # Add fitness-specific terms if not present
-        fitness_terms = [
-            "fitness",
-            "strength",
-            "muscle",
-            "training",
-            "workout",
-            "exercise",
+    async def _search_scientific_literature(self, query: str) -> Dict[str, Any]:
+        """Search for scientific studies and research"""
+        
+        # Add scientific search terms
+        scientific_query = f"{query} site:pubmed.ncbi.nlm.nih.gov OR site:ncbi.nlm.nih.gov OR systematic review OR meta-analysis"
+        
+        search_results = await self._perform_web_search(scientific_query)
+        
+        # Filter for scientific sources
+        scientific_results = [
+            result for result in search_results
+            if any(domain in result.get("url", "") for domain in ["ncbi.nlm.nih.gov", "pubmed"])
         ]
-        if not any(term in query_lower for term in fitness_terms):
-            query += " strength training fitness"
+        
+        analysis_prompt = f"""Analyze scientific literature for: "{query}"
+        
+        Scientific Sources Found:
+        {json.dumps(scientific_results[:5], indent=2)}
+        
+        Provide:
+        1. Research summary with key findings
+        2. Study quality and limitations
+        3. Practical implications for training
+        4. Areas needing more research
+        5. Evidence-based recommendations
+        
+        Focus on translating research into practical applications."""
+        
+        response = await self.send_message(analysis_prompt)
+        
+        return {
+            "type": "scientific_search_complete",
+            "query": query,
+            "analysis": response,
+            "scientific_sources": scientific_results[:5],
+            "total_studies_found": len(scientific_results)
+        }
 
-        return query
+    async def _search_exercise_technique(self, exercise_name: str) -> Dict[str, Any]:
+        """Search for exercise technique and form information"""
+        
+        technique_query = f"{exercise_name} proper form technique cues common mistakes"
+        
+        search_results = await self._perform_web_search(technique_query)
+        
+        # Prioritize reputable fitness sites
+        technique_results = self._prioritize_fitness_sites(search_results)
+        
+        analysis_prompt = f"""Analyze exercise technique for: "{exercise_name}"
+        
+        Technique Resources:
+        {json.dumps(technique_results[:5], indent=2)}
+        
+        Provide comprehensive technique guide:
+        1. Setup and starting position
+        2. Movement execution (step-by-step)
+        3. Common form errors and fixes
+        4. Safety considerations
+        5. Muscle activation and biomechanics
+        6. Variations for different goals/limitations
+        7. Programming recommendations
+        
+        Be specific and practical."""
+        
+        response = await self.send_message(analysis_prompt)
+        
+        return {
+            "type": "technique_analysis_complete",
+            "exercise": exercise_name,
+            "analysis": response,
+            "sources": technique_results[:5]
+        }
+
+    async def _search_workout_programs(self, program_type: str) -> Dict[str, Any]:
+        """Search for workout programs and templates"""
+        
+        program_query = f"{program_type} workout program template sets reps"
+        
+        search_results = await self._perform_web_search(program_query)
+        
+        # Filter for program-related content
+        program_results = self._prioritize_fitness_sites(search_results)
+        
+        analysis_prompt = f"""Find and analyze workout programs for: "{program_type}"
+        
+        Program Resources:
+        {json.dumps(program_results[:5], indent=2)}
+        
+        Extract and synthesize:
+        1. Program structure and periodization
+        2. Exercise selection and order
+        3. Volume and intensity parameters
+        4. Progression schemes
+        5. Recovery and deload protocols
+        6. Equipment requirements
+        7. Who the program is best suited for
+        
+        Provide practical program recommendations."""
+        
+        response = await self.send_message(analysis_prompt)
+        
+        return {
+            "type": "program_search_complete",
+            "program_type": program_type,
+            "analysis": response,
+            "sources": program_results[:5]
+        }
+
+    async def _perform_web_search(self, query: str) -> List[Dict[str, Any]]:
+        """Perform actual web search using available engines"""
+        
+        # Try primary search engine
+        results = await self._search_duckduckgo(query)
+        
+        if not results:
+            # Fallback to fitness site search
+            results = await self._search_fitness_sites(query)
+        
+        return results
 
     async def _search_duckduckgo(self, query: str) -> List[Dict[str, Any]]:
         """Search using DuckDuckGo API"""
-
+        
+        url = "https://api.duckduckgo.com/"
+        params = {
+            "q": query,
+            "format": "json",
+            "no_html": 1,
+            "skip_disambig": 1
+        }
+        
         try:
-            # Use DuckDuckGo instant answer API
-            url = f"https://api.duckduckgo.com/?q={quote_plus(query)}&format=json&no_html=1&skip_disambig=1"
-
             async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
+                async with session.get(url, params=params) as response:
                     if response.status == 200:
                         data = await response.json()
+                        
                         results = []
-
+                        
                         # Extract results from DuckDuckGo response
-                        if data.get("Results"):
-                            for item in data["Results"][:5]:
-                                results.append({
-                                    "title": item.get("Text", ""),
-                                    "url": item.get("FirstURL", ""),
-                                    "snippet": item.get("Result", ""),
-                                    "source": "duckduckgo",
-                                })
-
-                        # Also try related topics
                         if data.get("RelatedTopics"):
-                            for item in data["RelatedTopics"][:3]:
-                                if isinstance(item, dict) and "Text" in item:
+                            for topic in data["RelatedTopics"][:10]:
+                                if isinstance(topic, dict) and "Text" in topic:
                                     results.append({
-                                        "title": item.get("Text", "")[:100],
-                                        "url": item.get("FirstURL", ""),
-                                        "snippet": item.get("Text", ""),
-                                        "source": "duckduckgo_related",
+                                        "title": topic.get("Text", "")[:100],
+                                        "url": topic.get("FirstURL", ""),
+                                        "snippet": topic.get("Text", "")
                                     })
-
+                        
                         return results
-
+                        
         except Exception as e:
-            print(f"DuckDuckGo search failed: {e}")
-
-        # Fallback to web scraping approach
-        return await self._search_web_scraping(query)
-
-    async def _search_web_scraping(self, query: str) -> List[Dict[str, Any]]:
-        """Fallback web scraping search"""
-
-        try:
-            # Simple Google search scraping (for educational purposes)
-            search_url = f"https://www.google.com/search?q={quote_plus(query)}"
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
-
-            async with aiohttp.ClientSession() as session:
-                async with session.get(search_url, headers=headers) as response:
-                    if response.status == 200:
-                        html = await response.text()
-                        soup = BeautifulSoup(html, "html.parser")
-
-                        results = []
-                        search_results = soup.find_all("div", class_="g")
-
-                        for result in search_results[:5]:
-                            title_elem = result.find("h3")  # type: ignore
-                            link_elem = result.find("a")  # type: ignore
-                            snippet_elem = result.find("span", class_="aCOpRe")  # type: ignore
-
-                            if title_elem and link_elem and hasattr(link_elem, "get"):
-                                results.append({
-                                    "title": title_elem.get_text()
-                                    if title_elem
-                                    else "",
-                                    "url": link_elem.get("href", "")
-                                    if link_elem
-                                    else "",
-                                    "snippet": (
-                                        snippet_elem.get_text() if snippet_elem else ""
-                                    ),
-                                    "source": "web_scraping",
-                                })
-
-                        return results
-
-        except Exception as e:
-            print(f"Web scraping search failed: {e}")
-
+            print(f"DuckDuckGo search error: {e}")
+            
         return []
 
     async def _search_fitness_sites(self, query: str) -> List[Dict[str, Any]]:
         """Search specific fitness websites"""
-
+        
         results = []
-
-        for site in self.fitness_sites[:3]:  # Limit to avoid rate limiting
-            try:
-                # Search within specific site using Google site: operator
-                site_query = f"site:{site} {query}"
-                site_results = await self._search_web_scraping(site_query)
-
-                for result in site_results:
-                    result["source"] = f"fitness_site_{site}"
-                    results.append(result)
-
-                # Small delay to be respectful
-                await asyncio.sleep(0.5)
-
-            except Exception as e:
-                print(f"Search on {site} failed: {e}")
-                continue
-
+        
+        # Create Google site-specific search query
+        site_query = " OR ".join([f"site:{site}" for site in self.fitness_sites])
+        search_url = f"https://www.google.com/search?q={query} {site_query}"
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(search_url, headers=headers) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        soup = BeautifulSoup(html, 'html.parser')
+                        
+                        # Extract search results (simplified)
+                        for result in soup.find_all('div', class_='g')[:10]:
+                            title_elem = result.find('h3')
+                            link_elem = result.find('a')
+                            snippet_elem = result.find('span', class_='st')
+                            
+                            if title_elem and link_elem:
+                                results.append({
+                                    "title": title_elem.get_text(),
+                                    "url": link_elem.get('href', ''),
+                                    "snippet": snippet_elem.get_text() if snippet_elem else ""
+                                })
+                                
+        except Exception as e:
+            print(f"Fitness site search error: {e}")
+            
         return results
 
-    async def _analyze_fitness_results(
-        self, results: List[Dict], original_query: str, search_type: str
-    ) -> Dict[str, Any]:
-        """Analyze search results for fitness-specific insights"""
-
-        if not results:
-            return {"error": "No results to analyze"}
-
-        # Prepare results for AI analysis
-        results_text = "\n\n".join([
-            f"Title: {result.get('title', '')}\nURL: {result.get('url', '')}\nSnippet: {result.get('snippet', '')}"
-            for result in results[:8]  # Limit for token management
-        ])
-
-        system_prompt = """You are a fitness and exercise science expert analyzing web search results. 
-        Focus on extracting actionable, evidence-based information about:
-        - Workout programs and training methodologies
-        - Exercise techniques and form
-        - Scientific research and evidence
-        - Equipment recommendations
-        - Progression strategies
+    def _prioritize_fitness_sites(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Prioritize results from known reputable fitness sites"""
         
-        Prioritize information from reputable fitness sources and scientific studies."""
-
-        analysis_prompt = f"""
-        Analyze these fitness-related search results for the query: "{original_query}"
-        Search type: {search_type}
+        prioritized = []
+        other = []
         
-        Search Results:
-        {results_text}
+        for result in results:
+            url = result.get("url", "")
+            if any(site in url for site in self.fitness_sites):
+                prioritized.append(result)
+            else:
+                other.append(result)
         
-        Extract and synthesize the information in JSON format:
-        {{
-            "key_insights": ["main", "takeaways", "from", "results"],
-            "program_recommendations": [
-                {{
-                    "name": "Program name if found",
-                    "description": "What the program involves",
-                    "source": "Which website/source",
-                    "credibility": "Assessment of source credibility (1-10)",
-                    "evidence_level": "Type of evidence (anecdotal, expert opinion, research-based)"
-                }}
-            ],
-            "exercise_information": [
-                {{
-                    "exercise": "Exercise name",
-                    "benefits": ["benefits", "listed"],
-                    "form_cues": ["form", "cues", "mentioned"],
-                    "equipment": "Required equipment",
-                    "source": "Source website"
-                }}
-            ],
-            "scientific_evidence": [
-                {{
-                    "finding": "Research finding",
-                    "study_info": "Study details if mentioned",
-                    "practical_application": "How to apply this"
-                }}
-            ],
-            "equipment_recommendations": ["equipment", "mentioned", "as", "recommended"],
-            "credible_sources": ["list", "of", "most", "credible", "sources"],
-            "implementation_advice": "Practical advice for implementing the information",
-            "further_research_needed": ["areas", "requiring", "more", "research"]
-        }}
-        """
+        # Return prioritized results first, then others
+        return prioritized + other
 
-        analysis_response = await self.send_message(analysis_prompt, system_prompt)
-
-        try:
-            analysis_data = json.loads(analysis_response)
-
-            # Add metadata
-            analysis_data["analysis_metadata"] = {
-                "query": original_query,
-                "search_type": search_type,
-                "sources_analyzed": len(results),
-                "analysis_model": self.model,
-            }
-
-            return analysis_data
-
-        except json.JSONDecodeError:
-            return {
-                "analysis_text": analysis_response,
-                "query": original_query,
-                "search_type": search_type,
-                "note": "Analysis in text format due to parsing error",
-            }
-
-    async def search_specific_program(self, program_name: str) -> Dict[str, Any]:
-        """Search for information about a specific workout program"""
-
-        enhanced_query = f"{program_name} workout program routine review"
-
-        search_data = {"query": enhanced_query, "type": "program"}
-
-        return await self.process(search_data)
-
-    async def search_exercise_form(self, exercise_name: str) -> Dict[str, Any]:
-        """Search for exercise form and technique information"""
-
-        enhanced_query = f"{exercise_name} exercise form technique cues"
-
-        search_data = {"query": enhanced_query, "type": "exercise"}
-
-        return await self.process(search_data)
-
-    async def search_fitness_research(self, topic: str) -> Dict[str, Any]:
-        """Search for scientific research on fitness topics"""
-
-        enhanced_query = f"{topic} research study evidence science pubmed"
-
-        search_data = {"query": enhanced_query, "type": "research"}
-
-        return await self.process(search_data)
+    async def research_topic(self, topic: str, depth: str = "moderate") -> Dict[str, Any]:
+        """Conduct in-depth research on a fitness topic"""
+        
+        if not self.assistant_id:
+            await self.initialize()
+        
+        # Determine search queries based on depth
+        if depth == "comprehensive":
+            queries = [
+                f"{topic} scientific research studies",
+                f"{topic} systematic review meta-analysis", 
+                f"{topic} practical application training",
+                f"{topic} common mistakes myths"
+            ]
+        else:
+            queries = [
+                f"{topic} evidence-based recommendations",
+                f"{topic} best practices"
+            ]
+        
+        # Perform multiple searches
+        all_results = []
+        for query in queries:
+            results = await self._perform_web_search(query)
+            all_results.extend(results)
+        
+        # Remove duplicates based on URL
+        unique_results = []
+        seen_urls = set()
+        for result in all_results:
+            url = result.get("url")
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                unique_results.append(result)
+        
+        # Comprehensive analysis
+        research_prompt = f"""Conduct {depth} research on: "{topic}"
+        
+        Research Sources ({len(unique_results)} unique sources):
+        {json.dumps(unique_results[:15], indent=2)}
+        
+        Create a comprehensive research summary including:
+        
+        1. **Current Scientific Understanding**
+           - Key research findings
+           - Consensus vs. controversial areas
+           
+        2. **Practical Applications**
+           - Evidence-based recommendations
+           - Implementation strategies
+           
+        3. **Common Misconceptions**
+           - Myths to avoid
+           - Why they persist
+           
+        4. **Programming Considerations**
+           - How to apply this knowledge
+           - Individual variations
+           
+        5. **Future Directions**
+           - Gaps in current knowledge
+           - Emerging research
+           
+        Cite sources where appropriate."""
+        
+        response = await self.send_message(research_prompt)
+        
+        return {
+            "type": "research_complete",
+            "topic": topic,
+            "depth": depth,
+            "research_summary": response,
+            "sources_analyzed": len(unique_results),
+            "key_sources": unique_results[:10]
+        }
 
     async def get_capabilities(self) -> List[str]:
-        """Return fitness web search capabilities"""
-        return [
-            "program_research",
-            "exercise_form_lookup",
+        """Return list of agent capabilities"""
+        base_capabilities = await super().get_capabilities()
+        return base_capabilities + [
+            "web_search",
             "scientific_literature_search",
-            "equipment_research",
-            "technique_analysis",
-            "credibility_assessment",
+            "exercise_technique_research", 
+            "program_discovery",
+            "evidence_synthesis",
+            "source_credibility_assessment"
         ]
