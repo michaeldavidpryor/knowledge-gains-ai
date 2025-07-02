@@ -1,11 +1,11 @@
 # Knowledge Gains - Science-based Weightlifting App
 
-A science-based weightlifting app that uses AI agents to generate personalized workout programs based on user equipment, uploaded fitness documents, and web research.
+A science-based weightlifting app that uses AI services powered by OpenAI's Responses API to generate personalized workout programs based on user equipment, uploaded fitness documents, and web research.
 
 ## Features
 
 ### 🤖 AI-Powered Program Generation
-- **Specialized Agents**: Dedicated agents for file processing, web research, and program coordination
+- **AI Services**: Specialized services for file processing, web research, and program coordination using OpenAI's Responses API
 - **Multi-Source Intelligence**: Combines user-uploaded files, web research, and equipment assessment
 - **Science-Based Programming**: Uses evidence-based training principles and progression schemes
 
@@ -34,10 +34,10 @@ A science-based weightlifting app that uses AI agents to generate personalized w
 
 ## System Architecture
 
-### Agents
-- **WeightliftingCoordinator**: Main orchestrator for program generation
-- **FileProcessorAgent**: Processes uploaded fitness documents
-- **FitnessWebAgent**: Searches and analyzes web content
+### Services
+- **FileProcessorService**: Processes uploaded fitness documents using file_search and code_interpreter tools
+- **WebSearchService**: Searches and analyzes web content using built-in web_search tool
+- **WorkoutCoordinatorService**: Orchestrates program generation with stateful conversations
 
 ### Database Schema (Supabase)
 - User profiles and equipment tracking
@@ -181,7 +181,7 @@ Visit `http://localhost:8000` to access the application.
 - **Backend**: FastAPI, Python 3.11+
 - **Package Management**: uv (fast Python package installer)
 - **Database**: Supabase (PostgreSQL)
-- **AI**: OpenAI GPT-4
+- **AI**: OpenAI Responses API with GPT-4.1
 - **Frontend**: HTMX, DaisyUI, Tailwind CSS
 - **Authentication**: Supabase Auth
 - **File Processing**: PyPDF2, python-docx
@@ -193,13 +193,11 @@ Visit `http://localhost:8000` to access the application.
 ### Project Structure
 ```
 knowledge-gains/
-├── agents/                 # AI agent implementations
-│   ├── base_agent.py
-│   ├── weightlifting_coordinator.py
-│   ├── file_processor_agent.py
-│   └── fitness_web_agent.py
-├── database/
-│   └── schema.sql         # Supabase database schema
+├── services/               # AI service implementations
+│   ├── base_service.py
+│   ├── workout_coordinator.py
+│   ├── file_processor.py
+│   └── web_search.py
 ├── templates/             # Jinja2 HTML templates
 │   ├── workout_session.html
 │   ├── home.html
@@ -214,7 +212,7 @@ knowledge-gains/
 
 ### Adding New Features
 
-1. **New Agents**: Extend `BaseAgent` class for specialized functionality
+1. **New Services**: Extend `BaseService` class for specialized functionality
 2. **Database Changes**: Update `schema.sql` and run migrations
 3. **Frontend Components**: Create reusable HTMX components
 4. **API Endpoints**: Add routes in `main.py` with proper validation

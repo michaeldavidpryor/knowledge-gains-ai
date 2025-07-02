@@ -252,7 +252,7 @@ class WorkoutCoordinatorService(BaseService):
             # Add metadata
             program_data["generated_at"] = datetime.now().isoformat()
             program_data["user_request"] = user_request
-            program_data["agent_info"] = {
+            program_data["service_info"] = {
                 "coordinator": "WorkoutCoordinatorService",
                 "model": self.model,
                 "version": "1.0",

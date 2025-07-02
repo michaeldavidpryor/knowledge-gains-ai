@@ -1,6 +1,6 @@
 """
 Knowledge Gains - Science-based Weightlifting App
-Main FastAPI application with AI agents and workout tracking
+Main FastAPI application with AI services and workout tracking
 """
 
 import os
@@ -36,7 +36,7 @@ from models.responses import InformationRequest, ProgramGenerated, ErrorResponse
 # Initialize FastAPI app
 app = FastAPI(
     title="Knowledge Gains",
-    description="Science-based weightlifting program generator with AI agents",
+    description="Science-based weightlifting program generator with AI services",
     version="1.0.0",
 )
 
@@ -162,7 +162,7 @@ async def generate_program(
     days_per_week: Optional[int] = Form(None),
     user: Dict = Depends(get_current_user),
 ):
-    """Generate a new workout program using AI agents"""
+    """Generate a new workout program using AI services"""
 
     # Prepare data for coordinator
     program_data = {
@@ -476,7 +476,7 @@ async def analyze_form_stream(
     
     async def generate():
         try:
-            # Process with file processor agent using streaming
+            # Process with file processor service using streaming
             analysis_prompt = f"""Analyze this {exercise_name} form. 
             Provide real-time feedback on:
             1. Technique correctness

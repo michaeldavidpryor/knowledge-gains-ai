@@ -31,7 +31,7 @@ CREATE TABLE public.workout_programs (
     
     -- AI Generation metadata
     generated_by_ai BOOLEAN DEFAULT TRUE,
-    agent_version TEXT,
+    service_version TEXT,
     source_files TEXT[], -- file hashes that influenced generation
     web_research_queries TEXT[], -- searches that influenced generation
     
@@ -168,7 +168,7 @@ CREATE TABLE public.uploaded_files (
     processing_status TEXT DEFAULT 'pending' CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
     
     -- AI Analysis results
-    analysis_results JSONB, -- Results from FileProcessorAgent
+    analysis_results JSONB, -- Results from FileProcessorService
     programs_extracted INTEGER DEFAULT 0,
     exercises_identified INTEGER DEFAULT 0,
     
@@ -194,7 +194,7 @@ CREATE TABLE public.program_modifications (
     
     -- AI involvement
     ai_suggested BOOLEAN DEFAULT FALSE,
-    agent_reasoning TEXT,
+    service_reasoning TEXT,
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -209,7 +209,7 @@ CREATE TABLE public.web_search_history (
     search_type TEXT, -- 'program', 'exercise', 'research'
     
     -- Results
-    results_summary JSONB, -- Analysis from FitnessWebAgent
+    results_summary JSONB, -- Analysis from WebSearchService
     sources_found TEXT[],
     credibility_scores JSONB,
     
