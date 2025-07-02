@@ -80,32 +80,54 @@ SECRET_KEY=your_secret_key_here
 3. Enable Row Level Security (RLS) policies
 4. Configure authentication settings
 
-### 3. Installation
+### 3. Installation with uv (Recommended)
 
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd knowledge-gains
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies
-pip install -r requirements.txt
+# Create virtual environment and install dependencies
+uv sync
 
-# Create necessary directories
-mkdir -p uploads static/css static/js templates/components
+# Setup development environment
+uv run scripts/dev.py setup
 ```
 
 ### 4. Running the Application
 
 ```bash
-# Development server
-python main.py
+# Development server with hot reload
+uv run scripts/dev.py serve
 
-# Or with uvicorn directly
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Or run directly with uv
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Alternative: activate virtual environment first
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+python main.py
+```
+
+### Development Commands
+
+```bash
+# Run tests
+uv run scripts/dev.py test
+
+# Format code
+uv run scripts/dev.py format
+
+# Run linting
+uv run scripts/dev.py lint
+
+# Run all checks
+uv run scripts/dev.py check
+
+# Install pre-commit hooks
+uv run scripts/dev.py install-hooks
 ```
 
 Visit `http://localhost:8000` to access the application.
@@ -157,12 +179,14 @@ Visit `http://localhost:8000` to access the application.
 ## Technology Stack
 
 - **Backend**: FastAPI, Python 3.11+
+- **Package Management**: uv (fast Python package installer)
 - **Database**: Supabase (PostgreSQL)
 - **AI**: OpenAI GPT-4
 - **Frontend**: HTMX, DaisyUI, Tailwind CSS
 - **Authentication**: Supabase Auth
 - **File Processing**: PyPDF2, python-docx
 - **Web Scraping**: aiohttp, BeautifulSoup4
+- **Development**: Black, isort, flake8, mypy, pre-commit
 
 ## Development
 
