@@ -1,0 +1,69 @@
+<div class="flex flex-col gap-8">
+  <!-- Day header -->
+  <div class="flex items-center gap-4 flex-wrap">
+    <h2 class="text-xl font-semibold">Week {{ week }} • Day {{ day }}</h2>
+    <div class="join">
+      {% for d in range(1,8) %}
+      <button
+        class="join-item btn btn-sm {% if d == day %}btn-primary{% else %}btn-outline{% endif %}"
+        hx-get="/routine/{{ routine_id }}/week/{{ week }}/day/{{ d }}"
+        hx-target="#day-container"
+        hx-swap="innerHTML"
+      >
+        {{ d }}
+      </button>
+      {% endfor %}
+    </div>
+    {% if can_finish %}
+    <button
+      class="btn btn-success btn-sm"
+      hx-post="/routine/{{ routine_id }}/week/{{ week }}/day/{{ day }}/finish"
+      hx-target="body"
+      hx-swap="none"
+    >
+      Finish Day
+    </button>
+    {% endif %}
+  </div>
+  <!-- Exercises -->
+  {% for ex in exercises %}
+  <div class="card bg-base-100 shadow flex flex-col">
+    <div class="card-body">
+      <h3 class="card-title">{{ ex.name }}</h3>
+      <p class="text-sm opacity-70">Sets: {{ ex.sets }} • Reps: {{ ex.reps }} • RIR: {{ ex.rir }}</p>
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr class="text-xs">
+              <th>Set</th>
+              <th>Weight (kg)</th>
+              <th>Reps</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in range(ex.sets) %}
+            <tr>
+              <form
+                hx-post="/routine/{{ routine_id }}/week/{{ week }}/day/{{ day }}/log"
+                hx-swap="outerHTML"
+                class="contents"
+              >
+                <td>
+                  <input type="hidden" name="exercise_name" value="{{ ex.name }}" />
+                  <input type="hidden" name="set_number" value="{{ i + 1 }}" />
+                  {{ i + 1 }}
+                </td>
+                <td><input type="number" step="0.5" min="0" name="weight" class="input input-sm input-bordered w-24" required /></td>
+                <td><input type="number" min="1" name="reps" class="input input-sm input-bordered w-20" required /></td>
+                <td><button class="btn btn-sm btn-success">Save</button></td>
+              </form>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>

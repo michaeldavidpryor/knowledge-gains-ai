@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="flex flex-col gap-6 w-full max-w-3xl self-center">
+  <h2 class="text-2xl font-bold">Tell us about your goals</h2>
+  <form
+    hx-post="/goals"
+    hx-target="main"
+    hx-swap="innerHTML"
+    enctype="multipart/form-data"
+    class="flex flex-col gap-4"
+  >
+    <textarea name="goals" class="textarea textarea-bordered" placeholder="Your goals…" required></textarea>
+    <input type="text" name="program_ref" class="input input-bordered" placeholder="Favourite program (optional)" />
+    <label class="form-control">
+      <span class="label-text">Import previous log (txt/csv)</span>
+      <input type="file" name="import_file" class="file-input file-input-bordered" />
+    </label>
+    <button class="btn btn-primary self-start">Next</button>
+  </form>
+</section>
+{% endblock %}

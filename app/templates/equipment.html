@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="flex flex-col gap-6 w-full max-w-3xl self-center">
+  <h2 class="text-2xl font-bold">Equipment inventory</h2>
+  <form
+    hx-post="/equipment"
+    hx-target="main"
+    hx-swap="innerHTML"
+    class="flex flex-col gap-4"
+  >
+    <textarea
+      name="equipment"
+      class="textarea textarea-bordered"
+      placeholder="Full gym, or list items: dumbbells, barbell, rack…"
+      required
+    ></textarea>
+    <button class="btn btn-primary self-start">Next</button>
+  </form>
+</section>
+{% endblock %}

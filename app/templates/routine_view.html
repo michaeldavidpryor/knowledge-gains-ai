@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div x-data="{edit:false}">
+  <header class="flex flex-col gap-2 mb-6">
+    <div class="flex items-start gap-4 flex-wrap">
+      <h1 class="text-3xl font-bold grow">{{ program.title }}</h1>
+      <button class="btn btn-outline btn-sm" @click="edit = !edit" x-text="edit ? 'Close editor' : 'Edit program'"></button>
+    </div>
+    <p class="max-w-prose">{{ program.summary }}</p>
+  </header>
+  <!-- json editor -->
+  <div x-show="edit" x-transition class="mb-8 w-full">
+    <form hx-post="/routine/{{ routine_id }}/update" hx-target="body" hx-swap="none" class="flex flex-col gap-4">
+      <textarea
+        name="program_json"
+        class="textarea textarea-bordered w-full h-72 font-mono text-sm"
+        x-text="JSON.stringify({{ program.model_dump()|tojson }}, null, 2)"
+      ></textarea>
+      <button class="btn btn-primary w-fit self-start">Save changes</button>
+    </form>
+  </div>
+  <!-- Week selector -->
+  <div class="tabs tabs-bordered mb-6 flex-wrap">
+    {% for w in weeks %}
+    <a
+      role="tab"
+      class="tab"
+      hx-get="/routine/{{ routine_id }}/week/{{ w }}/day/1"
+      hx-target="#day-container"
+      hx-swap="innerHTML"
+      >Week {{ w }}</a
+    >
+    {% endfor %}
+  </div>
+  <div
+    id="day-container"
+    hx-get="/routine/{{ routine_id }}/week/{{ weeks[0] }}/day/1"
+    hx-trigger="load"
+    hx-swap="innerHTML"
+  ></div>
+</div>
+{% endblock %}

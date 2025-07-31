@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +14,19 @@
 
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        .htmx-indicator {
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        .htmx-request .htmx-indicator {
+            opacity: 1;
+        }
+        .htmx-request.htmx-indicator {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body class="bg-base-200">
     <!-- Navigation -->
@@ -101,8 +114,8 @@
                     <!-- Submission -->
                     <div class="card-actions justify-end mt-6">
                         <button type="submit" class="btn btn-primary btn-wide">
+                            <span class="htmx-indicator loading loading-spinner loading-sm" id="loading-indicator"></span>
                             Generate Program
-                            <span class="loading loading-spinner loading-sm hidden" id="loading-indicator"></span>
                         </button>
                     </div>
                 </form>
@@ -115,12 +128,11 @@
 
     <script>
         // Handle HTMX response to redirect after successful program generation
-        document.body.addEventListener('htmx:afterOnLoad', function(event) {
-            const xhr = event.detail.xhr;
-            if (xhr.status === 200) {
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            if (event.detail.xhr.status === 200) {
                 try {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.status === 'success' && response.redirect) {
+                    const response = JSON.parse(event.detail.xhr.responseText);
+                    if (response.redirect) {
                         window.location.href = response.redirect;
                     }
                 } catch (e) {
