@@ -1,26 +1,93 @@
-{% extends "base.html" %}
+{% extends "shared/_base.html" %}
 {% block content %}
-<section class="flex flex-col gap-6 w-full max-w-3xl self-center">
-  <h2 class="text-2xl font-bold">Schedule preferences</h2>
-  <form
-    hx-post="/schedule"
-    hx-target="main"
-    hx-swap="innerHTML"
-    class="grid grid-cols-1 md:grid-cols-2 gap-4"
-  >
-    <label class="form-control">
-      <span class="label-text">Training days per week</span>
-      <input type="number" name="days_per_week" min="1" max="7" class="input input-bordered" required />
-    </label>
-    <label class="form-control">
-      <span class="label-text">Total program length (weeks)</span>
-      <input type="number" name="weeks" min="4" max="52" class="input input-bordered" required />
-    </label>
-    <button class="btn btn-primary col-span-full w-fit">
-      <span class="htmx-indicator loading loading-spinner loading-sm"></span>
-      <span class="htmx-indicator">Generating... This could take up to 45 seconds</span>
-      <span class="htmx-indicator">Generate Program</span>
-    </button>
-  </form>
-</section>
+    <div class="flex items-center justify-center min-h-[70vh]">
+        <div class="card bg-base-100 shadow-2xl border border-base-300 w-full max-w-2xl">
+            <figure class="px-8 pt-8">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-primary-content" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+            </figure>
+            <div class="card-body text-center">
+                <h2 class="card-title text-3xl font-bold justify-center mb-2">Schedule Preferences</h2>
+                <p class="text-base-content/70 mb-6">Configure your training schedule and program duration to fit your
+                    lifestyle and goals.</p>
+
+                <form
+                        hx-post="/schedule"
+                        hx-target="body"
+                        hx-swap="morph"
+                        hx-indicator="#schedule-loading"
+                        class="flex flex-col gap-6"
+                >
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold text-base">Training Days per Week</span>
+                            </label>
+                            <select name="days_per_week" class="select select-bordered select-lg" required>
+                                <option value="" disabled selected>Choose frequency</option>
+                                <option value="2">2 days</option>
+                                <option value="3">3 days</option>
+                                <option value="4">4 days</option>
+                                <option value="5">5 days</option>
+                                <option value="6">6 days</option>
+                            </select>
+                            <label class="label">
+                                <span class="label-text-alt text-xs opacity-70">More days = more muscle focus splits</span>
+                            </label>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold text-base">Program Length</span>
+                            </label>
+                            <select name="weeks" class="select select-bordered select-lg" required>
+                                <option value="" disabled selected>Choose duration</option>
+                                <option value="1">1 week</option>
+                                <option value="2">2 weeks</option>
+                                <option value="3">3 weeks</option>
+                                <option value="4">4 weeks</option>
+                                <option value="5">5 weeks</option>
+                                <option value="6">6 weeks</option>
+                                <option value="7">7 weeks</option>
+                                <option value="8">8 weeks</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label cursor-pointer justify-center">
+                            <span class="label-text font-semibold text-base mr-3">Include Deload Week</span>
+                            <input type="checkbox" name="deload_week" class="checkbox checkbox-primary"/>
+                        </label>
+                    </div>
+
+                    <div class="divider">Ready to generate?</div>
+
+                    <div class="card-actions justify-center pt-4">
+                        <button class="btn btn-primary btn-lg" x-data="{ clicked: false }" @click="clicked = true">
+                            <span x-show="clicked">
+                                <span id="schedule-loading" class="htmx-indicator loading-spinner loading-sm"></span>
+                                Generating Program...
+                            </span>
+                            <span x-show="!clicked">Generate Program</span>
+                        </button>
+                    </div>
+
+                    <div class="alert alert-info text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none"
+                             viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Program generation may take up to 45 seconds. Please be patient while our AI creates your personalized workout plan.</span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 {% endblock %}

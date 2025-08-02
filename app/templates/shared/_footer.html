@@ -1,0 +1,24 @@
+<footer class="footer p-6 bg-base-200 text-base-content border-t border-base-300">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-4">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                <img src="{{ url_for('static', path='assets/logo.svg') }}" alt="Knowledge Gains Logo" class="h-5 w-5"/>
+            </div>
+            <p class="font-bold text-lg">
+                Knowledge<span class="text-primary"> Gains</span>
+            </p>
+        </div>
+
+        <nav class="flex flex-wrap gap-4">
+            <a href="#" class="link link-hover text-sm opacity-70 hover:opacity-100">Privacy Policy</a>
+            <a href="#" class="link link-hover text-sm opacity-70 hover:opacity-100">Terms of Service</a>
+            <a href="#" class="link link-hover text-sm opacity-70 hover:opacity-100">Support</a>
+        </nav>
+    </div>
+
+    <div class="text-center lg:text-left">
+        <p class="text-xs opacity-50">
+            Copyright © 2025 Pryor Mechanical.
+        </p>
+    </div>
+</footer>

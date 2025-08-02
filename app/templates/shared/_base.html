@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block title %}Knowledge Gains AI - Your Personal Fitness Coach{% endblock %}</title>
+    <meta name="description" content="AI-powered fitness program generator and workout tracker">
+    <!-- HTMX Plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js"></script>
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css"/>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+          rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Alpine Plugins -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/mask@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/morph@3.x.x/dist/cdn.min.js"></script>
+    <!-- Alpine Core -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Global HTMX Configuration -->
+    <script>
+        // Global error handling for HTMX requests
+        document.addEventListener('htmx:responseError', function (evt) {
+            console.error('HTMX Error:', evt.detail);
+
+            // Show a global error toast/alert
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'toast toast-end';
+            errorDiv.style.top = '5rem'; // Position below navbar
+            errorDiv.innerHTML = `
+                <div class="alert alert-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Request failed. Please try again.</span>
+                </div>
+            `;
+            document.body.appendChild(errorDiv);
+
+            // Remove the error after 5 seconds
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        });
+
+        // Handle network errors
+        document.addEventListener('htmx:sendError', function (evt) {
+            console.error('HTMX Network Error:', evt.detail);
+
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'toast toast-end';
+            errorDiv.style.top = '5rem'; // Position below navbar
+            errorDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span>Network error. Please check your connection.</span>
+                </div>
+            `;
+            document.body.appendChild(errorDiv);
+
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        });
+
+        // Enhanced loading states
+        document.addEventListener('htmx:beforeRequest', function (evt) {
+            // Add loading class to the element
+            evt.detail.elt.classList.add('htmx-loading');
+
+            // Show global loading indicator for long requests
+            if (!document.getElementById('global-loading')) {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.id = 'global-loading';
+                loadingDiv.className = 'fixed top-20 right-4 z-50 opacity-0 transition-opacity duration-300';
+                loadingDiv.innerHTML = `
+                    <div class="alert alert-info shadow-lg">
+                        <span class="loading loading-spinner loading-sm"></span>
+                        <span>Processing...</span>
+                    </div>
+                `;
+                document.body.appendChild(loadingDiv);
+
+                // Fade in after a short delay (for longer requests)
+                setTimeout(() => {
+                    loadingDiv.classList.remove('opacity-0');
+                }, 500);
+            }
+        });
+
+        document.addEventListener('htmx:afterRequest', function (evt) {
+            // Remove loading class
+            evt.detail.elt.classList.remove('htmx-loading');
+
+            // Remove global loading indicator
+            const globalLoading = document.getElementById('global-loading');
+            if (globalLoading) {
+                globalLoading.classList.add('opacity-0');
+                setTimeout(() => globalLoading.remove(), 300);
+            }
+        });
+
+
+    </script>
+</head>
+<body class="flex flex-col min-h-screen bg-base-100">
+
+<header class="relative z-10">
+    {% block header %}
+        {% include "/shared/_header.html" %}
+    {% endblock %}
+</header>
+
+<main class="flex-1 relative z-10 py-8">
+    <div class="container mx-auto px-4 max-w-7xl">
+        {% block content %}
+        {% endblock %}
+    </div>
+</main>
+
+<footer class="relative z-10">
+    {% block footer %}
+        {% include "/shared/_footer.html" %}
+    {% endblock %}
+</footer>
+</body>
+</html>

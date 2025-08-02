@@ -1,20 +1,140 @@
-{% extends "base.html" %}
+{% extends "shared/_base.html" %}
 {% block content %}
-<section class="flex flex-col gap-6 w-full max-w-3xl self-center">
-  <h2 class="text-2xl font-bold">Equipment inventory</h2>
-  <form
-    hx-post="/equipment"
-    hx-target="main"
-    hx-swap="innerHTML"
-    class="flex flex-col gap-4"
-  >
-    <textarea
-      name="equipment"
-      class="textarea textarea-bordered"
-      placeholder="Full gym, or list items: dumbbells, barbell, rack…"
-      required
-    ></textarea>
-    <button class="btn btn-primary self-start">Next</button>
-  </form>
-</section>
+    <div class="flex items-center justify-center min-h-[70vh]">
+        <div class="card bg-base-100 shadow-2xl border border-base-300 w-full max-w-2xl">
+            <div class="card-body text-center place-items-center">
+                <h2 class="card-title text-3xl font-bold justify-center mb-2">Equipment Inventory</h2>
+
+                <form
+                        hx-post="/equipment"
+                        hx-target="body"
+                        hx-swap="morph"
+                        hx-indicator="#equipment-loading"
+                        class="flex flex-col gap-6"
+                >
+                    <div class="form-control">
+                        <div class="mb-4">
+                            <button type="button" class="btn btn-secondary btn-sm"
+                                    onclick="quick_add_modal.showModal()">
+                                Quick Add Equipment
+                            </button>
+                        </div>
+
+                        <textarea
+                                id="equipment-textarea"
+                                name="equipment"
+                                class="textarea textarea-md min-h-32 w-full"
+                                placeholder="Tell us what equipment you have access to, so we can create the perfect workout for you."
+                                required
+                        ></textarea>
+                        <label class="label">
+                            <span class="label-text-alt text-xs opacity-70">Be as specific as possible for better workout recommendations</span>
+                        </label>
+                    </div>
+
+                    <div class="card-actions justify-center pt-4">
+                        <button class="btn btn-primary btn-lg" x-data="{ clicked: false }" @click="clicked = true">
+                            <span x-show="clicked">
+                                <span id="equipment-loading"
+                                      class="htmx-indicator loading-spinner loading-sm"></span>
+                                Processing...
+                            </span>
+                            <span x-show="!clicked">Continue to Schedule</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Add Modal -->
+    <dialog id="quick_add_modal" class="modal">
+        <div class="modal-box w-11/12 max-w-2xl">
+            <h3 class="font-bold text-lg mb-4">Quick Add Common Equipment</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <button type="button" id="eq-barbell" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Barbell', 'eq-barbell')">
+                    Barbell
+                </button>
+                <button type="button" id="eq-dumbbells" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Dumbbells', 'eq-dumbbells')">
+                    Dumbbells
+                </button>
+                <button type="button" id="eq-bench" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Adjustable Bench', 'eq-bench')">
+                    Adjustable Bench
+                </button>
+                <button type="button" id="eq-rack" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Power Rack', 'eq-rack')">
+                    Power Rack
+                </button>
+                <button type="button" id="eq-pullup" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Pull-up Bar', 'eq-pullup')">
+                    Pull-up Bar
+                </button>
+                <button type="button" id="eq-cable" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Cable Machine', 'eq-cable')">
+                    Cable Machine
+                </button>
+                <button type="button" id="eq-plates" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Olympic Plates', 'eq-plates')">
+                    Olympic Plates
+                </button>
+                <button type="button" id="eq-bands" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Resistance Bands', 'eq-bands')">
+                    Resistance Bands
+                </button>
+                <button type="button" id="eq-fullrack" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Full Rack with Functional Trainer', 'eq-fullrack')">
+                    Full Rack + Trainer
+                </button>
+                <button type="button" id="eq-kettlebells" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Kettlebells', 'eq-kettlebells')">
+                    Kettlebells
+                </button>
+                <button type="button" id="eq-smith" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Smith Machine', 'eq-smith')">
+                    Smith Machine
+                </button>
+                <button type="button" id="eq-fullgym" class="btn btn-sm btn-outline"
+                        onclick="addEquipmentWithDisable('Full Gym Access', 'eq-fullgym')">
+                    Full Gym Access
+                </button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <script>
+        function addEquipment(equipment) {
+            const textarea = document.getElementById('equipment-textarea');
+            const currentValue = textarea.value.trim();
+
+            if (currentValue === '') {
+                textarea.value = equipment;
+            } else {
+                textarea.value = currentValue + ', ' + equipment;
+            }
+
+            textarea.focus();
+        }
+
+        function addEquipmentWithDisable(equipment, buttonId) {
+            addEquipment(equipment);
+
+            // Disable the button and change its appearance
+            const button = document.getElementById(buttonId);
+            button.disabled = true;
+            button.classList.remove('btn-outline');
+            button.classList.add('btn-disabled');
+            button.textContent = button.textContent + ' ✓';
+        }
+
+        function addEquipmentAndClose(equipment) {
+            addEquipment(equipment);
+            quick_add_modal.close();
+        }
+    </script>
 {% endblock %}

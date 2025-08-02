@@ -1,69 +1,311 @@
-<div class="flex flex-col gap-8">
-  <!-- Day header -->
-  <div class="flex items-center gap-4 flex-wrap">
-    <h2 class="text-xl font-semibold">Week {{ week }} • Day {{ day }}</h2>
-    <div class="join">
-      {% for d in range(1,8) %}
-      <button
-        class="join-item btn btn-sm {% if d == day %}btn-primary{% else %}btn-outline{% endif %}"
-        hx-get="/routine/{{ routine_id }}/week/{{ week }}/day/{{ d }}"
-        hx-target="#day-container"
-        hx-swap="innerHTML"
-      >
-        {{ d }}
-      </button>
-      {% endfor %}
+<div class="p-8 space-y-12" x-data="{ finishingDay: false }">
+    <!-- Day header -->
+    <div class="flex flex-col lg:flex-row lg:items-center gap-8">
+        <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-3xl font-bold">Week {{ week }} • Day {{ day }}</h2>
+                    <p class="text-sm opacity-70">Complete your workout by logging each set</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-6">
+            <!-- Day navigation -->
+            <div class="join">
+                {% for d in range(1,8) %}
+                    <button
+                            class="join-item btn btn-sm {% if d == day %}btn-primary{% else %}btn-outline{% endif %}"
+                            hx-get="/routine/{{ routine_id }}/week/{{ week }}/day/{{ d }}"
+                            hx-target="#day-container"
+                            hx-swap="innerHTML"
+                            hx-indicator="#day-nav-loading"
+                            x-data="{ clicked: false }"
+                            @click="clicked = true"
+                            @htmx:after-request="clicked = false"
+                    >
+                        <span x-html="clicked ? '<span class=&quot;loading-spinner loading-xs&quot;></span>' : '{{ d }}'"></span>
+                    </button>
+                {% endfor %}
+                <span id="day-nav-loading" class="htmx-indicator ml-2"></span>
+            </div>
+
+            <!-- Finish day button -->
+            {% if can_finish %}
+                <button
+                        class="btn btn-success gap-2"
+                        hx-post="/routine/{{ routine_id }}/week/{{ week }}/day/{{ day }}/finish"
+                        hx-target="body"
+                        hx-swap="none"
+                        hx-indicator="#finish-loading"
+                        @htmx:before-request="finishingDay = true"
+                        :disabled="finishingDay"
+                        :class="{ 'loading': finishingDay }"
+                >
+                    <span id="finish-loading" class="htmx-indicator loading-spinner loading-sm"></span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span x-show="!finishingDay">Complete Workout</span>
+                    <span x-show="finishingDay">Finishing...</span>
+                </button>
+            {% endif %}
+        </div>
     </div>
-    {% if can_finish %}
-    <button
-      class="btn btn-success btn-sm"
-      hx-post="/routine/{{ routine_id }}/week/{{ week }}/day/{{ day }}/finish"
-      hx-target="body"
-      hx-swap="none"
-    >
-      Finish Day
-    </button>
-    {% endif %}
-  </div>
-  <!-- Exercises -->
-  {% for ex in exercises %}
-  <div class="card bg-base-100 shadow flex flex-col">
-    <div class="card-body">
-      <h3 class="card-title">{{ ex.name }}</h3>
-      <p class="text-sm opacity-70">Sets: {{ ex.sets }} • Reps: {{ ex.reps }} • RIR: {{ ex.rir }}</p>
-      <div class="overflow-x-auto">
-        <table class="table">
-          <thead>
-            <tr class="text-xs">
-              <th>Set</th>
-              <th>Weight (kg)</th>
-              <th>Reps</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for i in range(ex.sets) %}
-            <tr>
-              <form
-                hx-post="/routine/{{ routine_id }}/week/{{ week }}/day/{{ day }}/log"
-                hx-swap="outerHTML"
-                class="contents"
-              >
-                <td>
-                  <input type="hidden" name="exercise_name" value="{{ ex.name }}" />
-                  <input type="hidden" name="set_number" value="{{ i + 1 }}" />
-                  {{ i + 1 }}
-                </td>
-                <td><input type="number" step="0.5" min="0" name="weight" class="input input-sm input-bordered w-24" required /></td>
-                <td><input type="number" min="1" name="reps" class="input input-sm input-bordered w-20" required /></td>
-                <td><button class="btn btn-sm btn-success">Save</button></td>
-              </form>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+
+    <!-- Exercise instructions -->
+    <div class="card bg-gradient-to-r from-info/10 to-info/5 border border-info/20" x-data="{ dismissed: false }"
+         x-show="!dismissed" x-transition>
+        <div class="card-body">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-full bg-info/20 flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-info" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-lg font-bold">How to Track Your Sets</h3>
+                        <button @click="dismissed = true"
+                                class="btn btn-ghost btn-sm btn-circle opacity-50 hover:opacity-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <h4 class="font-semibold mb-1">Logging Sets:</h4>
+                            <p class="opacity-80">Enter the weight used and reps completed for each set. Your progress
+                                will be automatically tracked.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-1">RIR (Reps in Reserve):</h4>
+                            <p class="opacity-80">This indicates how many more reps you could have done - helps gauge
+                                intensity.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  {% endfor %}
+
+    <!-- Exercises -->
+    {% for ex in exercises %}
+        <div class="card bg-base-100 shadow-lg border border-base-300 hover:shadow-xl transition-shadow"
+             x-data="{ exerciseName: '{{ ex.name }}', setsCompleted: 0 }">
+            <div class="card-body">
+                <!-- Exercise header -->
+                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                                <span class="text-primary-content font-bold text-sm">{{ loop.index }}</span>
+                            </div>
+                            <h3 class="text-2xl font-bold">{{ ex.name }}</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-6 text-sm">
+                            <div class="badge badge-primary gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24"
+                                     stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                </svg>
+                                {{ ex.sets }} Sets
+                            </div>
+                            <div class="badge badge-secondary gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24"
+                                     stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                                {{ ex.reps }} Reps
+                            </div>
+                            <div class="badge badge-accent gap-1">
+                                <img src="{{ url_for('static', path='assets/logo.svg') }}" alt="Knowledge Gains Logo" class="h-3 w-3" />
+                                {{ ex.rir }} RIR
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if ex.exercise_example %}
+                        <div class="flex gap-2">
+                            <a href="{{ ex.exercise_example }}" target="_blank" class="btn btn-outline btn-sm gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                     stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m-6-8h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2z"/>
+                                </svg>
+                                Watch Demo
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Sets tracking -->
+                <div class="space-y-6">
+                    <h4 class="text-lg font-semibold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                             stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        Track Your Sets
+                    </h4>
+
+                    <div class="grid gap-4">
+                        {% for i in range(ex.sets) %}
+                            <div class="card bg-base-50 border border-base-200"
+                                 x-data="{ logging: false, logged: false }"
+                                 :id="'set-' + exerciseName.replace(/\s+/g, '-').toLowerCase() + '-{{ i + 1 }}'">
+                                <div class="card-body p-6">
+                                    <form
+                                            hx-post="/routine/{{ routine_id }}/week/{{ week }}/day/{{ day }}/log"
+                                            hx-swap="outerHTML"
+                                            hx-target="closest .card"
+                                            hx-indicator="find .set-loading"
+                                            class="flex flex-col sm:flex-row gap-6 items-end"
+                                            @htmx:before-request="logging = true"
+                                            @htmx:after-request="logging = false; logged = true; setsCompleted++; setTimeout(() => { $el.querySelector('input[name=weight]').value = ''; $el.querySelector('input[name=reps]').value = ''; logged = false; }, 3000)"
+                                    >
+                                        <input type="hidden" name="exercise_name" value="{{ ex.name }}"/>
+                                        <input type="hidden" name="set_number" value="{{ i + 1 }}"/>
+
+                                        <div class="flex items-center gap-3 flex-shrink-0">
+                                            <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                                                <span class="text-primary font-bold text-sm">{{ i + 1 }}</span>
+                                            </div>
+                                            <span class="font-semibold">Set {{ i + 1 }}</span>
+                                        </div>
+
+                                        <div class="form-control flex-1">
+                                            <label class="label py-1">
+                                                <span class="label-text text-xs font-medium">Weight (kg)</span>
+                                            </label>
+                                            <input
+                                                    type="number"
+                                                    step="0.5"
+                                                    min="0"
+                                                    name="weight"
+                                                    class="input input-bordered input-sm"
+                                                    placeholder="0.0"
+                                                    :disabled="logging || logged"
+                                                    required
+                                            />
+                                        </div>
+
+                                        <div class="form-control flex-1">
+                                            <label class="label py-1">
+                                                <span class="label-text text-xs font-medium">Reps Completed</span>
+                                            </label>
+                                            <input
+                                                    type="number"
+                                                    min="1"
+                                                    name="reps"
+                                                    class="input input-bordered input-sm"
+                                                    placeholder="0"
+                                                    :disabled="logging || logged"
+                                                    required
+                                            />
+                                        </div>
+
+                                        <button
+                                                type="submit"
+                                                class="btn btn-primary btn-sm gap-2 w-24"
+                                                :disabled="logging || logged"
+                                                :class="{ 'btn-success': logged }"
+                                        >
+                                            <span x-html="logging ? 'Saving...' : (logged ? 'Logged!' : 'Log Set')"></span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Exercise progress indicator -->
+                <div class="card bg-gradient-to-r from-success/10 to-success/5 border border-success/20 mt-8">
+                    <div class="card-body p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-success" fill="none"
+                                     viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                                <span class="text-sm font-semibold">Exercise Progress</span>
+                            </div>
+                            <span class="text-sm font-bold" id="{{ ex.name }}-progress"
+                                  x-text="setsCompleted + ' / {{ ex.sets }} sets completed'">0 / {{ ex.sets }} sets completed</span>
+                        </div>
+                        <div class="w-full h-3 bg-base-300 rounded-full overflow-hidden">
+                            <div
+                                    class="h-full bg-success rounded-full transition-none"
+                                    :style="'width: ' + (setsCompleted / {{ ex.sets }} * 100) + '%'"
+                                    id="{{ ex.name }}-bar"
+                            ></div>
+                        </div>
+                        <div class="flex justify-between text-xs opacity-70 mt-1">
+                            <span>Start</span>
+                            <span :class="{ 'text-success font-bold': setsCompleted >= {{ ex.sets }} }">Complete</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
 </div>
+
+<script>
+    // Enhanced progress tracking with animations
+    document.addEventListener('htmx:afterSwap', function (evt) {
+        if (evt.detail.target.classList.contains('card')) {
+            // A set was logged, add celebration effect
+            evt.detail.target.style.transform = 'scale(1.02)';
+            evt.detail.target.style.transition = 'all 0.3s ease';
+            setTimeout(() => {
+                evt.detail.target.style.transform = 'scale(1)';
+            }, 300);
+
+            // Show success toast
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-top toast-end';
+            toast.innerHTML = `
+      <div class="alert alert-success">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Set logged successfully!</span>
+      </div>
+    `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    });
+
+    // Smooth scroll to next incomplete set
+    function scrollToNextSet() {
+        setTimeout(() => {
+            const nextIncompleteSet = document.querySelector('.card:not(.bg-success)');
+            if (nextIncompleteSet) {
+                nextIncompleteSet.scrollIntoView({behavior: 'smooth', block: 'center'});
+            }
+        }, 500);
+    }
+
+    // Auto-scroll after each set completion
+    document.addEventListener('htmx:afterSwap', scrollToNextSet);
+</script>

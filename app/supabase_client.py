@@ -15,16 +15,19 @@ sb: Client = create_client(
 
 # ---------- wizard answers ----------
 def save_answers(user_id: str, answer_dict: dict):
-    exists = (
+    existing = (
         sb.table("wizard_answers")
-        .select("id")
+        .select("id, answers")
         .eq("user_id", user_id)
         .single()
         .execute()
         .data
     )
-    if exists:
-        sb.table("wizard_answers").update({"answers": answer_dict}).eq(
+    if existing:
+        # Merge new answers with existing ones
+        current_answers = existing["answers"] or {}
+        current_answers.update(answer_dict)
+        sb.table("wizard_answers").update({"answers": current_answers}).eq(
             "user_id", user_id
         ).execute()
     else:
@@ -44,7 +47,7 @@ def store_uploaded_file(user_id: str, filename: str, text: str) -> str:
             "filename": filename,
             "file_text": text,
             "embedding": embedding,
-            "ts": datetime.datetime.utcnow().isoformat(),
+            "ts": datetime.datetime.now(datetime.UTC).isoformat(),
         }
     ).execute()
     return fid
@@ -73,7 +76,7 @@ def save_program(user_id: str, program: Program, routine_id: str | None = None) 
                 "user_id": user_id,
                 "title": program.title,
                 "routine_json": program.model_dump_json(),
-                "created_at": datetime.datetime.utcnow().isoformat(),
+                "created_at": datetime.datetime.now(datetime.UTC).isoformat(),
             }
         ).execute()
     else:
@@ -108,7 +111,7 @@ def save_set_log(
             "set_number": set_number,
             "weight": weight,
             "reps": reps,
-            "ts": datetime.datetime.utcnow().isoformat(),
+            "ts": datetime.datetime.now(datetime.UTC).isoformat(),
         }
     ).execute()
 
@@ -134,6 +137,6 @@ def mark_day_finished(user_id: str, routine_id: str, week: int, day: int):
             "routine_id": routine_id,
             "week": week,
             "day": day,
-            "ts": datetime.datetime.utcnow().isoformat(),
+            "ts": datetime.datetime.now(datetime.UTC).isoformat(),
         }
     ).execute()

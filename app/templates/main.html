@@ -1,0 +1,65 @@
+{% extends "shared/_base.html" %}
+{% block content %}
+    <div class="flex items-center justify-center min-h-[70vh]">
+        <div class="card bg-base-100 shadow-2xl border border-base-300 w-full max-w-2xl">
+            <div class="card-body place-items-center text-center pt-4">
+                <h2 class="card-title text-3xl font-bold justify-center mb-2">Tell Us About Your Goals</h2>
+                <p class="text-base-content/70 mb-6">Share your fitness aspirations and any educational materials to
+                    help us create the perfect program for you.</p>
+                <form
+                        hx-post="/goals"
+                        hx-target="body"
+                        hx-swap="morph"
+                        hx-indicator="#goals-loading"
+                        enctype="multipart/form-data"
+                        class="flex flex-col gap-6 w-full"
+                >
+                    <div class="form-control text-center w-full" x-data="{ count: 0 }">
+                        <textarea
+                                name="goals"
+                                class="textarea textarea-md h-full min-h-32 w-full"
+                                placeholder="Tell us about your fitness goals, current experience level, preferences, and any specific requirements (minimum 10 characters)"
+                                required
+                                minlength="10"
+                                x-on:input="count = $el.value.length"
+                        ></textarea>
+                        <label class="label">
+                            <span class="label-text-alt text-xs opacity-70">
+                                <span x-text="count"></span>/10 characters minimum
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="card-actions justify-center text-sm">Upload any training guides, articles, or
+                        educational materials you'd
+                        like us to consider
+                    </div>
+
+                    <div class="card-actions justify-center">
+                        <input
+                                type="file"
+                                name="import_file"
+                                class="file-input file-input-bordered file-input-sm"
+                                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                        />
+                    </div>
+
+                    <div class="divider">Ready to continue?</div>
+
+                    <div class="card-actions justify-center">
+                        <button type="submit" class="btn btn-primary btn-lg" x-data="{ clicked: false }"
+                                @click="clicked = true">
+                                    <span x-show="clicked">
+                                        <span id="goals-loading"
+                                              class="htmx-indicator loading-spinner loading-sm"></span>
+                                        Processing...
+                                    </span>
+                            <span x-show="!clicked">Continue to Equipment</span>
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+{% endblock %}

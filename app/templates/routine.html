@@ -1,4 +1,96 @@
-{% extends "base.html" %}
+{% extends "shared/_base.html" %}
+
+{% block title %}Loading Your Program - Knowledge Gains AI{% endblock %}
+
 {% block content %}
-<p class="text-center">Redirecting…</p>
+<div class="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+    <!-- Loading animation -->
+    <div class="relative">
+        <div class="w-24 h-24 rounded-full bg-gradient-to-r from-primary to-secondary p-1 animate-spin">
+            <div class="w-full h-full rounded-full bg-base-100 flex items-center justify-center">
+                <img src="{{ url_for('static', path='assets/logo.svg') }}" alt="Knowledge Gains Logo" class="h-8 w-8" />
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading content -->
+    <div class="text-center space-y-4 max-w-md">
+        <h2 class="text-3xl font-bold text-gradient">Generating Your Program</h2>
+        <div class="space-y-2">
+            <p class="text-lg opacity-80">Our AI is creating your personalized workout program...</p>
+            <div class="flex justify-center space-x-2 text-sm opacity-60">
+                <span class="animate-pulse">Analyzing your goals</span>
+                <span>•</span>
+                <span class="animate-pulse">Matching exercises</span>
+                <span>•</span>
+                <span class="animate-pulse">Optimizing schedule</span>
+            </div>
+        </div>
+        
+        <!-- Progress indicators -->
+        <div class="space-y-3">
+            <div class="flex justify-between text-sm">
+                <span>Progress</span>
+                <span id="progress-percent">Initializing...</span>
+            </div>
+            <progress class="progress progress-primary w-full" value="10" max="100" id="loading-progress"></progress>
+            <p class="text-xs opacity-50">This process typically takes 30-60 seconds</p>
+        </div>
+        
+        <!-- Motivational content -->
+        <div class="card bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 mt-8">
+            <div class="card-body p-6 text-center">
+                <h3 class="font-bold text-lg mb-2">💪 Get Ready to Transform!</h3>
+                <p class="text-sm opacity-80">Your personalized fitness journey is about to begin. We're crafting a program that's perfectly tailored to your goals, equipment, and schedule.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enhanced loading experience
+let progress = 10;
+const progressBar = document.getElementById('loading-progress');
+const progressText = document.getElementById('progress-percent');
+
+const messages = [
+    'Analyzing your fitness goals...',
+    'Selecting optimal exercises...',
+    'Calculating training loads...',
+    'Organizing weekly schedule...',
+    'Adding progressive overload...',
+    'Finalizing your program...'
+];
+
+let messageIndex = 0;
+
+const updateProgress = () => {
+    if (progress < 95) {
+        progress += Math.random() * 15 + 5;
+        if (progress > 95) progress = 95;
+        
+        progressBar.value = progress;
+        progressText.textContent = Math.round(progress) + '%';
+        
+        // Update message occasionally
+        if (Math.random() < 0.3 && messageIndex < messages.length - 1) {
+            messageIndex++;
+            progressText.textContent = messages[messageIndex];
+        }
+        
+        setTimeout(updateProgress, Math.random() * 2000 + 1000);
+    }
+};
+
+// Start progress simulation
+setTimeout(updateProgress, 1000);
+
+// Add some visual effects
+setInterval(() => {
+    const loader = document.querySelector('.animate-spin');
+    if (loader) {
+        loader.style.transform = `rotate(${Date.now() / 10 % 360}deg)`;
+    }
+}, 50);
+</script>
 {% endblock %}

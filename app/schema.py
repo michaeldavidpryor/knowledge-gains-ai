@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 
 
 class Exercise(BaseModel):
@@ -12,22 +12,12 @@ class Exercise(BaseModel):
     exercise_example: str
     rir: Optional[int] = Field(default=2)
 
-    @computed_field
-    @property
-    def export_muscle_targeted(self) -> str:
-        return self.muscle_targeted
-
 
 class DayPlan(BaseModel):
     # days start at 1
 
     day: int
     exercises: List[Exercise]
-    muscles_targeted: List[str]
-
-    @computed_field
-    def export_muscle_targeted(self) -> list[str]:
-        return self.muscles_targeted
 
 
 class WeekPlan(BaseModel):
