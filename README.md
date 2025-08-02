@@ -23,17 +23,18 @@ principles. Upload your training logs, specify your equipment, and get AI-genera
 
 #### Specify Equipment
 
-![](app/static/assets/equip-inventory.png)
-!(app/static/assets/equip-inventory-add.png)
+![Equipment Page](app/static/assets/equip-inventory.png)
+![Equipment Page Quick Add](app/static/assets/equip-inventory-add.png)
 
 #### Schedule Preferences
 
-!(app/static/assets/schedule-preferences.png)
+![Schedule Page](app/static/assets/schedule-preferences.png)
 
 #### Workout Summary and Tracking
 
-!(app/static/assets/program-description.png)
-!(app/static/assets/program-day-overview.png)
+![Program Page](app/static/assets/program-description.png)
+![Program Page Week Overview](app/static/assets/program-week-overview.png)
+![Program Page Day Overview](app/static/assets/program-day-overview.png)
 
 ### Modern User Interface
 
