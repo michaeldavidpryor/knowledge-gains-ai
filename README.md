@@ -33,7 +33,6 @@ principles. Upload your training logs, specify your equipment, and get AI-genera
 #### Workout Summary and Tracking
 
 ![Program Page](app/static/assets/program-description.png)
-![Program Page Week Overview](app/static/assets/program-week-overview.png)
 ![Program Page Day Overview](app/static/assets/program-day-overview.png)
 
 ### Modern User Interface
