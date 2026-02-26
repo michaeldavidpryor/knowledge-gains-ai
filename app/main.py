@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from dotenv import load_dotenv
 from .schema import Program
 from .openai_client import generate_program
-from .supabase_client import (
+from .sqlite_client import (
     save_answers,
     save_program,
     save_set_log,
@@ -17,6 +17,8 @@ from .supabase_client import (
     store_uploaded_file,
     latest_file_text,
     sb,
+    get_wizard_answers,
+    get_routine,
 )
 
 load_dotenv()
@@ -37,14 +39,9 @@ def user_id(request: Request) -> str:
 
 
 def fetch_program(routine_id: str) -> Program:
-    row = (
-        sb.table("routines")
-        .select("routine_json")
-        .eq("id", routine_id)
-        .single()
-        .execute()
-        .data
-    )
+    row = get_routine(routine_id)
+    if not row:
+        raise ValueError(f"Routine {routine_id} not found")
     return Program.model_validate_json(row["routine_json"])
 
 
@@ -147,14 +144,12 @@ async def handle_schedule(
         uid = user_id(request)
         save_answers(uid, {"days_per_week": days_per_week, "weeks": weeks})
         
-        answers_row = (
-            sb.table("wizard_answers")
-            .select("*")
-            .eq("user_id", uid)
-            .single()
-            .execute()
-            .data
-        )
+        answers_row = get_wizard_answers(uid)
+        if not answers_row:
+            return HTMLResponse(
+                '<div class="alert alert-error"><span>No answers found. Please start from the beginning.</span></div>',
+                status_code=400
+            )
         
         upload_txt = latest_file_text(uid)
         program = generate_program(answers_row, upload_txt)
