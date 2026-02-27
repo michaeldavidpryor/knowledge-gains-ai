@@ -81,7 +81,7 @@ principles. Upload your training logs, specify your equipment, and get AI-genera
 
    Edit `.env` with your API keys:
    ```env
-   OPENAI_API_KEY=sk-your-openai-api-key-here
+   OPENROUTER_API_KEY=sk-your-openrouter-api-key-here
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
    SESSION_SECRET=your-32-character-session-secret

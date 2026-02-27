@@ -1,27 +1,32 @@
 import os
 import uuid
-from fastapi import FastAPI, Request, Form, UploadFile, File
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-from dotenv import load_dotenv
-from .schema import Program
+
 from .openai_client import generate_program
+from .schema import Program
 from .supabase_client import (
+    count_logged_sets,
+    latest_file_text,
+    mark_day_finished,
     save_answers,
     save_program,
     save_set_log,
-    count_logged_sets,
-    mark_day_finished,
-    store_uploaded_file,
-    latest_file_text,
     sb,
+    store_uploaded_file,
 )
 
 load_dotenv()
 app = FastAPI(title="Hypertrophy-Wizard")
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET"))
+session_secret = os.getenv("SESSION_SECRET")
+if not session_secret:
+    raise RuntimeError("SESSION_SECRET environment variable must be set for session support.")
+app.add_middleware(SessionMiddleware, secret_key=session_secret)  # type: ignore[arg-type]
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 app.mount(
@@ -63,36 +68,41 @@ async def handle_goals(
     try:
         uid = user_id(request)
         file_text = None
-        
+
         # Validate goals input
         if not goals or len(goals.strip()) < 10:
             return HTMLResponse(
                 '<div class="alert alert-error"><span>Please provide more detailed goals (at least 10 characters).</span></div>',
                 status_code=400
             )
-        
-        if import_file and import_file.size > 0:
-            # Check file size (50MB limit)
-            if import_file.size > 50 * 1024 * 1024:
+
+        if import_file:
+            file_size = getattr(import_file, "size", None)
+            max_size = 50 * 1024 * 1024  # 50MB
+
+            if file_size is not None and file_size > max_size:
                 return HTMLResponse(
                     '<div class="alert alert-error"><span>File too large. Maximum size is 50MB.</span></div>',
                     status_code=400
                 )
-            
+
             file_bytes = await import_file.read()
-            try:
-                file_text = file_bytes.decode("utf-8")
-            except UnicodeDecodeError:
-                file_text = file_bytes.decode("utf-8", errors="ignore")
-            # Remove null bytes which PostgreSQL can't handle
-            file_text = file_text.replace("\x00", "")
-            # Truncate to ~50K chars to avoid token limits (roughly 200K tokens)
-            if len(file_text) > 50000:
-                file_text = (
-                    file_text[:50000] + "\n\n[FILE TRUNCATED - Original file was too large]"
-                )
-            store_uploaded_file(uid, import_file.filename, file_text)
-        
+            if file_bytes:
+                try:
+                    file_text = file_bytes.decode("utf-8")
+                except UnicodeDecodeError:
+                    file_text = file_bytes.decode("utf-8", errors="ignore")
+                # Remove null bytes which PostgreSQL can't handle
+                file_text = file_text.replace("\x00", "")
+                # Truncate to ~50K chars to avoid token limits (roughly 200K tokens)
+                if len(file_text) > 50000:
+                    file_text = (
+                        file_text[:50000]
+                        + "\n\n[FILE TRUNCATED - Original file was too large]"
+                    )
+                filename = import_file.filename or "uploaded_file.txt"
+                store_uploaded_file(uid, filename, file_text)
+
         save_answers(
             uid,
             {"goals": goals, "program_ref": program_ref, "import_file": bool(file_text)},
@@ -114,7 +124,7 @@ async def handle_equipment(request: Request, equipment: str = Form(...)):
                 '<div class="alert alert-error"><span>Please provide more details about your equipment (at least 5 characters).</span></div>',
                 status_code=400
             )
-        
+
         save_answers(user_id(request), {"equipment": equipment})
         return templates.TemplateResponse("schedule.html", {"request": request})
     except Exception as e:
@@ -137,16 +147,16 @@ async def handle_schedule(
                 '<div class="alert alert-error"><span>Days per week must be between 1 and 7.</span></div>',
                 status_code=400
             )
-        
+
         if not (4 <= weeks <= 52):
             return HTMLResponse(
                 '<div class="alert alert-error"><span>Program length must be between 4 and 52 weeks.</span></div>',
                 status_code=400
             )
-        
+
         uid = user_id(request)
         save_answers(uid, {"days_per_week": days_per_week, "weeks": weeks})
-        
+
         answers_row = (
             sb.table("wizard_answers")
             .select("*")
@@ -155,7 +165,7 @@ async def handle_schedule(
             .execute()
             .data
         )
-        
+
         upload_txt = latest_file_text(uid)
         program = generate_program(answers_row, upload_txt)
         rid = save_program(uid, program)
@@ -211,7 +221,7 @@ async def update_program(request: Request, rid: str, program_json: str = Form(..
         prog = Program.model_validate_json(program_json)
     except Exception as e:
         return HTMLResponse(
-            f'<div class="alert alert-error"><svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>Invalid JSON: {str(e)}</span></div>', 
+            f'<div class="alert alert-error"><svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>Invalid JSON: {str(e)}</span></div>',
             status_code=400
         )
     save_program(user_id(request), prog, routine_id=rid)

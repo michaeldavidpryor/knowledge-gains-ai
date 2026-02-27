@@ -1,16 +1,26 @@
+import datetime
 import os
 import uuid
-import datetime
 from typing import Optional
-from supabase import create_client, Client
+
 from dotenv import load_dotenv
-from .schema import Program
+from supabase import Client, create_client
+
 from .openai_client import embed_text
+from .schema import Program
 
 load_dotenv()
-sb: Client = create_client(
-    os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-)
+supabase_url = os.getenv("SUPABASE_URL")
+if not supabase_url:
+    raise RuntimeError("SUPABASE_URL environment variable must be set for Supabase support.")
+
+service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+if not service_role_key:
+    raise RuntimeError(
+        "SUPABASE_SERVICE_ROLE_KEY environment variable must be set for Supabase support."
+    )
+
+sb: Client = create_client(supabase_url, service_role_key)
 
 
 # ---------- wizard answers ----------
