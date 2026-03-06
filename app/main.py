@@ -235,7 +235,7 @@ async def log_set(
     save_set_log(
         user_id(request), rid, week, day, exercise_name, set_number, weight, reps
     )
-    return HTMLResponse("<td colspan='4' class='text-center text-success'>✅</td>")
+    return HTMLResponse("<td colspan='4' class='text-center text-success'>Logged</td>")
 
 
 @app.post("/routine/{rid}/week/{week}/day/{day}/finish", response_class=HTMLResponse)
